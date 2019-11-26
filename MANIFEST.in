@@ -1,0 +1,18 @@
+include MANIFEST.in
+include requirements.txt
+include *.json
+include *.md
+include *.py
+include *.txt
+recursive-include fieldservice *.css
+recursive-include fieldservice *.csv
+recursive-include fieldservice *.html
+recursive-include fieldservice *.ico
+recursive-include fieldservice *.js
+recursive-include fieldservice *.json
+recursive-include fieldservice *.md
+recursive-include fieldservice *.png
+recursive-include fieldservice *.py
+recursive-include fieldservice *.svg
+recursive-include fieldservice *.txt
+recursive-exclude fieldservice *.pyc
