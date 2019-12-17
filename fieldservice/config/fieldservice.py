@@ -12,6 +12,11 @@ def get_data():
                     "type": "doctype",
                     "name": "Service Report",
                     "label": _("Service Report"),
+                },
+                {
+                    "type": "doctype",
+                    "name": "Employee Item Assignment",
+                    "label": _("Employee Item Assignment"),
                 }
             ]
         }

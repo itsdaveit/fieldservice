@@ -7,7 +7,7 @@ def get_data():
 		{
 			"module_name": "Fieldservice",
 			"color": "grey",
-			"icon": "octicon octicon-file-directory",
+			"icon": "octicon octicon-briefcase",
 			"type": "module",
 			"label": _("Fieldservice")
 		}
