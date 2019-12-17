@@ -20,26 +20,6 @@ frappe.ui.form.on('Service Report', {
                 })
             });
         };
-        cur_frm.add_custom_button(__("Show Info"), function() {
-            frappe.call({
-                method: "frappe.client.get_value",
-                async:false,
-                args:{
-                    doctype:'User',
-                    filters:{
-                        name:frm.doc.owner
-                    },
-                    fieldname:['full_name']
-                },
-                callback:function (r) {
-                    if(r.message != undefined){
-                        console.log(r.message.full_name)
-                    };
-                    console.log(frappe.user)
-                }
-            });
-        })
-
     },
 	"employee" : function(frm) {
         frappe.call({
