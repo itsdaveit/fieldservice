@@ -102,12 +102,9 @@ def create_delivery_note(service_report):
         print(delivery_note_doc.customer)
         for item in items:
             delivery_note_doc.append("items", item)
-            print(item.item_code)
-            print(item.description)
-            print(item.qty)
 
         DN = frappe.get_doc("Delivery Note", delivery_note_doc.insert().name)
-        #DN.save()
+        frappe.msgprint("Lieferschein <a href=\"/desk#Form/Delivery%20Note/" + DN.name + "\">" + DN.name + "</a> erstellt.")
             
     else:
         frappe.throw('Keine abrechenbaren Positionen vorhanden.')
