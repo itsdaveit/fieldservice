@@ -15,17 +15,102 @@ def get_work_units_for_position(work_position, report_type):
 
     return False
 
-def get_items_from_work_positions(work_positions):
+def get_amount_of_hours(begin, end, report_doc):
+    timediff = end - begin
+    modulus = (timediff.seconds / 3600) % 1
+    full_hours = (timediff.seconds / 3600) - modulus
+    broken_hour = 0.0
+    if modulus == 0.0:
+        broken_hour = 0.0
+    if modulus > 0.0 and modulus <= 0.25:
+        broken_hour = 0.25
+    if modulus > 0.25 and modulus <= 0.5:
+        broken_hour = 0.5
+    if broken_hour > 0.5 and modulus <= 0.75:
+        broken_hour = 0.75
+    if broken_hour > 0.75 and modulus <= 1:
+        broken_hour = 1
+    hours_rounded = 0
+    hours_rounded = hours_rounded + (timediff.days * 24) 
+    hours_rounded = hours_rounded + full_hours
+    hours_rounded = hours_rounded + broken_hour
+    return hours_rounded
+
+
+def get_items_from_sr_work(work_positions, report_doc):
+    delivery_note_items = []
+    employee_item = frappe.get_all('Employee Item Assignment', 
+                                    filters={'employee': report_doc.employee,
+                                            'service_type': report_doc.report_type},
+                                    fields={'name', 'item'}
+                                    )
+    if len(employee_item) != 1:
+        frappe.throw('Employee Item Assignment Mehrdeutig oder nicht gefunden.')
+    
+    
+    item_code = employee_item[0].item
+    print( "########### " + item_code)
+
+    
+    for work_position in work_positions:
+        qty = get_amount_of_hours(work_position.begin, work_position.end, report_doc)
+        delivery_note_item = frappe.get_doc({"doctype": "Delivery Note Item",
+                                                "item_code": item_code,
+                                                "description": work_position.description,
+                                                "qty": qty
+                                                })
+        delivery_note_items.append(delivery_note_item)
+    return delivery_note_items
+    
+
+def get_items_from_sr_items(items):
+    delivery_note_items = []
+    for item in items:
+        #print(item.name)
+        #print(item.item)
+        #print(item.amount)
+        delivery_note_item = frappe.get_doc({"doctype": "Delivery Note Item",
+                                                "item_code": item.item,
+                                                "description": item.item_name,
+                                                "qty": item.amount
+                                                })
+        delivery_note_items.append(delivery_note_item)
+    return delivery_note_items
+
+def create_delivery_note_items(items):
     pass
 
 @frappe.whitelist()
 def create_delivery_note(service_report):
     report_doc = frappe.get_doc("Service Report", service_report)
     items = []
-    print(report_doc["customer"])
-    #if(len(report_doc.work) > 0):
-    #    items.append(get_items_from_work_positions(work))
-    #if(len(report_doc.items) > 0):
-    #    items.append(get_items_from_sr_items(items))
+
+    if(len(report_doc.work) > 0):
+        items = items + get_items_from_sr_work(report_doc.work, report_doc)
+    if(len(report_doc.items) > 0):
+        items = items + get_items_from_sr_items(report_doc.items)
+
+
+    if len(items) > 0:
+        delivery_note_doc = frappe.get_doc({"doctype": "Delivery Note",
+                                            "title": "Lieferschein zu " + report_doc.name,
+                                            "customer": report_doc.customer,
+                                            "status": "Draft",
+                                            "company": frappe.get_doc("Global Defaults").default_company,
+                                            "delivery_note_introduction_text": "Lieferschein zu Serviceprotokoll " + report_doc.name,
+                                            })
+        print(delivery_note_doc.customer)
+        for item in items:
+            delivery_note_doc.append("items", item)
+            print(item.item_code)
+            print(item.description)
+            print(item.qty)
+
+        DN = frappe.get_doc("Delivery Note", delivery_note_doc.insert().name)
+        #DN.save()
+            
+    else:
+        frappe.throw('Keine abrechenbaren Positionen vorhanden.')
+
     
-    return report_doc
+    

@@ -76,6 +76,7 @@
   },
   {
    "allow_in_quick_entry": 1,
+   "default": "On-Site Service",
    "fieldname": "report_type",
    "fieldtype": "Select",
    "label": "Report Type",
@@ -187,7 +188,7 @@
  ],
  "hide_toolbar": 1,
  "is_submittable": 1,
- "modified": "2019-12-17 22:18:31.469439",
+ "modified": "2019-12-26 23:14:50.877024",
  "modified_by": "D.Malinowski@itsdave.de",
  "module": "Fieldservice",
  "name": "Service Report",
