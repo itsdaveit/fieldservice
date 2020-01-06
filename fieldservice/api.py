@@ -17,8 +17,12 @@ def get_work_units_for_position(work_position, report_type):
 
 def get_amount_of_hours(begin, end, report_doc):
     timediff = end - begin
+    print("beginn: " + str(begin) + " end: " + str(end))
     modulus = (timediff.seconds / 3600) % 1
+    print("mod: " + str(modulus))
+    print("timediff: " + str(timediff.seconds))
     full_hours = (timediff.seconds / 3600) - modulus
+    print("full: " + str(full_hours))
     broken_hour = 0.0
     if modulus == 0.0:
         broken_hour = 0.0
@@ -26,15 +30,22 @@ def get_amount_of_hours(begin, end, report_doc):
         broken_hour = 0.25
     if modulus > 0.25 and modulus <= 0.5:
         broken_hour = 0.5
-    if broken_hour > 0.5 and modulus <= 0.75:
+    if modulus > 0.5 and modulus <= 0.75:
         broken_hour = 0.75
-    if broken_hour > 0.75 and modulus <= 1:
+    if modulus > 0.75 and modulus <= 1:
         broken_hour = 1
     hours_rounded = 0
     hours_rounded = hours_rounded + (timediff.days * 24) 
     hours_rounded = hours_rounded + full_hours
     hours_rounded = hours_rounded + broken_hour
     return hours_rounded
+
+def get_work_item_description(item_code, description, begin, end):
+    work_item_doc = frappe.get_doc("Item", item_code)
+    item_description = work_item_doc.description + "<br>" + begin.strftime("%d.%m.%Y %H:%M") + " - " + end.strftime("%d.%m.%Y %H:%M") + " Uhr"
+    item_description = item_description + "<br>" + description
+    
+    return item_description
 
 
 def get_items_from_sr_work(work_positions, report_doc):
@@ -59,6 +70,9 @@ def get_items_from_sr_work(work_positions, report_doc):
                                                 "description": work_position.description,
                                                 "qty": qty
                                                 })
+        
+        delivery_note_item.description = get_work_item_description(item_code, work_position.description, work_position.begin, work_position.end)
+        print(delivery_note_item.name)
         delivery_note_items.append(delivery_note_item)
     return delivery_note_items
     
