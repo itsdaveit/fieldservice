@@ -30,7 +30,9 @@
   "signature_technician",
   "column_break_8",
   "technician",
-  "amended_from"
+  "amended_from",
+  "mandatory_section_section",
+  "company"
  ],
  "fields": [
   {
@@ -184,12 +186,25 @@
   {
    "fieldname": "section_break_2",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Company"
+  },
+  {
+   "fieldname": "mandatory_section_section",
+   "fieldtype": "Section Break",
+   "hidden": 1,
+   "label": "Mandatory Section"
   }
  ],
  "hide_toolbar": 1,
  "is_submittable": 1,
- "modified": "2019-12-26 23:14:50.877024",
- "modified_by": "D.Malinowski@itsdave.de",
+ "modified": "2020-11-16 16:43:16.315617",
+ "modified_by": "Administrator",
  "module": "Fieldservice",
  "name": "Service Report",
  "owner": "Administrator",
