@@ -1,5 +1,6 @@
 frappe.listview_settings['Service Report'] = {
 	hide_name_column: true,
+    add_fields: ["status", "name"],
 
 	onload: function(me) {
         frappe.call({
@@ -25,5 +26,16 @@ frappe.listview_settings['Service Report'] = {
         });
 		
 		me.page.set_title(__("Service Report"));
+    },
+    	
+	get_indicator: function (doc) {
+		if (doc.status === "Delivered") {
+			return [__("Delivered"), "green", "status,=,Delivered"];
+		} else if (doc.status === "Submitted") {
+			return [__("Submitted"), "blue", "status,=,Submitted"];
+        } else if (doc.status === "Draft") {
+			return [__("Draft"), "orange", "status,=,Draft"];
+        }
     }
+
 }

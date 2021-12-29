@@ -97,31 +97,38 @@ def create_delivery_note_items(items):
 @frappe.whitelist()
 def create_delivery_note(service_report):
     report_doc = frappe.get_doc("Service Report", service_report)
-    items = []
+    if not report_doc.delivery_note:
+        items = []
 
-    if(len(report_doc.work) > 0):
-        items = items + get_items_from_sr_work(report_doc.work, report_doc)
-    if(len(report_doc.items) > 0):
-        items = items + get_items_from_sr_items(report_doc.items)
+        if(len(report_doc.work) > 0):
+            items = items + get_items_from_sr_work(report_doc.work, report_doc)
+        if(len(report_doc.items) > 0):
+            items = items + get_items_from_sr_items(report_doc.items)
 
 
-    if len(items) > 0:
-        delivery_note_doc = frappe.get_doc({"doctype": "Delivery Note",
-                                            "title": "Lieferschein zu " + report_doc.name,
-                                            "customer": report_doc.customer,
-                                            "status": "Draft",
-                                            "company": frappe.get_doc("Global Defaults").default_company,
-                                            "delivery_note_introduction_text": "Lieferschein zu Serviceprotokoll " + report_doc.name,
-                                            })
-        print(delivery_note_doc.customer)
-        for item in items:
-            delivery_note_doc.append("items", item)
+        if len(items) > 0:
+            delivery_note_doc = frappe.get_doc({"doctype": "Delivery Note",
+                                                "title": "Lieferschein zu " + report_doc.name,
+                                                "customer": report_doc.customer,
+                                                "status": "Draft",
+                                                "company": frappe.get_doc("Global Defaults").default_company,
+                                                "delivery_note_introduction_text": "Lieferschein zu Serviceprotokoll " + report_doc.name,
+                                                })
+            print(delivery_note_doc.customer)
+            for item in items:
+                delivery_note_doc.append("items", item)
 
-        DN = frappe.get_doc("Delivery Note", delivery_note_doc.insert().name)
-        frappe.msgprint("Lieferschein <a href=\"/desk#Form/Delivery%20Note/" + DN.name + "\">" + DN.name + "</a> erstellt.")
-            
+            DN = frappe.get_doc("Delivery Note", delivery_note_doc.insert().name)
+            report_doc.delivery_note = DN.name
+            report_doc.status = "Delivered"
+            report_doc.save()
+            frappe.msgprint("Lieferschein <a href=\"/desk#Form/Delivery%20Note/" + DN.name + "\">" + DN.name + "</a> erstellt.")
+                
+        else:
+            frappe.throw('Keine abrechenbaren Positionen vorhanden.')
     else:
-        frappe.throw('Keine abrechenbaren Positionen vorhanden.')
+        frappe.msgprint("Lieferschein <a href=\"/desk#Form/Delivery%20Note/" + report_doc.delivery_note + "\">" + report_doc.delivery_note + "</a> bereits vorhanden.")
+
 
     
     

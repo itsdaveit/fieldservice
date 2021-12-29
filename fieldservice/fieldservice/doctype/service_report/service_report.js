@@ -15,7 +15,8 @@ frappe.ui.form.on('Service Report', {
                         
                     },
                     callback: (response) => {
-                        console.log(response.message);
+                        console.log(response.message),
+                        frm.reload_doc();
                     } 
                 })
             });
