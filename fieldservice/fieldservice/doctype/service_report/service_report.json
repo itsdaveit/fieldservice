@@ -105,7 +105,6 @@
    "options": "Service Report Work"
   },
   {
-   "collapsible": 1,
    "fieldname": "items_delivered_section",
    "fieldtype": "Section Break",
    "label": "Items Delivered"
@@ -232,10 +231,9 @@
    "options": "Barcode"
   }
  ],
- "hide_toolbar": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2021-12-29 00:34:20.569297",
+ "modified": "2022-01-11 13:34:18.405313",
  "modified_by": "Administrator",
  "module": "Fieldservice",
  "name": "Service Report",

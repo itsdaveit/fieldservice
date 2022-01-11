@@ -84,9 +84,9 @@ def get_items_from_sr_items(items):
         #print(item.item)
         #print(item.amount)
         delivery_note_item = frappe.get_doc({"doctype": "Delivery Note Item",
-                                                "item_code": item.item,
+                                                "item_code": item.item_code,
                                                 "description": item.item_name,
-                                                "qty": item.amount
+                                                "qty": item.qty
                                                 })
         delivery_note_items.append(delivery_note_item)
     return delivery_note_items
@@ -104,6 +104,10 @@ def create_delivery_note(service_report):
             items = items + get_items_from_sr_work(report_doc.work, report_doc)
         if(len(report_doc.items) > 0):
             items = items + get_items_from_sr_items(report_doc.items)
+        
+        print("items vorher------")
+        for item in report_doc.items:
+            print(item.item_code, item.name, item.qty)
 
 
         if len(items) > 0:
@@ -115,8 +119,18 @@ def create_delivery_note(service_report):
                                                 "delivery_note_introduction_text": "Lieferschein zu Serviceprotokoll " + report_doc.name,
                                                 })
             print(delivery_note_doc.customer)
+            
+            print("items zu dn------")
             for item in items:
                 delivery_note_doc.append("items", item)
+                print(item.item_code, item.name, item.qty)
+
+
+            
+            #debug
+            print("items nachher------")
+            for item in delivery_note_doc.items:
+                print(item.item_code, item.name, item.qty)
 
             DN = frappe.get_doc("Delivery Note", delivery_note_doc.insert().name)
             report_doc.delivery_note = DN.name

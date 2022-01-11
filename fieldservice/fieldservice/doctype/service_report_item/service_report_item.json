@@ -1,25 +1,16 @@
 {
+ "actions": [],
  "autoname": "hash",
  "creation": "2019-11-17 03:03:27.723766",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "amount",
-  "item",
+  "qty",
+  "item_code",
   "item_name"
  ],
  "fields": [
-  {
-   "columns": 2,
-   "fieldname": "item",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Item Code",
-   "options": "Item",
-   "print_width": "120",
-   "reqd": 1
-  },
   {
    "columns": 7,
    "fieldname": "item_name",
@@ -29,8 +20,18 @@
    "print_width": "400"
   },
   {
+   "columns": 2,
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Item Code",
+   "options": "Item",
+   "print_width": "120",
+   "reqd": 1
+  },
+  {
    "columns": 1,
-   "fieldname": "amount",
+   "fieldname": "qty",
    "fieldtype": "Float",
    "in_list_view": 1,
    "label": "Quantity",
@@ -39,7 +40,8 @@
   }
  ],
  "istable": 1,
- "modified": "2019-12-16 22:49:59.963562",
+ "links": [],
+ "modified": "2021-12-29 03:10:38.194625",
  "modified_by": "Administrator",
  "module": "Fieldservice",
  "name": "Service Report Item",

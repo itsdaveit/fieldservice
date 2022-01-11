@@ -4,6 +4,11 @@
 
 
 frappe.ui.form.on('Service Report', {
+    scan_barcode: function(frm) {
+        let transaction_controller= new erpnext.TransactionController({frm});
+        transaction_controller.scan_barcode();
+    },
+
 	refresh: function(frm) {
         if(frm.doc.docstatus===1) {
             cur_frm.add_custom_button(__("Create Delivery Note"), function() {
@@ -44,21 +49,23 @@ frappe.ui.form.on('Service Report', {
 	},
 	contact_person: function(frm) {
 		erpnext.utils.get_contact_details(frm);
-	}
+	},
 });
 
+
+
 frappe.ui.form.on("Service Report Item", {
-    item: function(frm, cdt, cdn) {
+    item_code: function(frm, cdt, cdn) {
         var cur_doc = locals[cdt][cdn];
         frappe.call({
             "method": "frappe.client.get",
             args: {
                 doctype: "Item",
-                name: cur_doc.item
+                name: cur_doc.item_code
 			},
 			callback: function (data) {
                 frappe.model.set_value(cur_doc.item_name = data.message.item_name);
-                //frm.refresh_fields();
+                frm.refresh_fields();
 			}
 		})
         
