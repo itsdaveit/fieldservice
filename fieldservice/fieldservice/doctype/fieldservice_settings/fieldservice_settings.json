@@ -1,0 +1,42 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2022-04-03 21:53:40.399703",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "max_work_duration"
+ ],
+ "fields": [
+  {
+   "default": "8",
+   "description": "Is checked before Submit of Service Report. If one work position is longer than this amount of hours, an error will be thrown.",
+   "fieldname": "max_work_duration",
+   "fieldtype": "Int",
+   "label": "Max Work Duration"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2022-04-03 21:53:40.399703",
+ "modified_by": "Administrator",
+ "module": "Fieldservice",
+ "name": "Fieldservice Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

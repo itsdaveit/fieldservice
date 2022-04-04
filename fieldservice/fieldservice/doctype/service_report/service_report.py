@@ -12,4 +12,9 @@ class ServiceReport(Document):
 	def on_submit(self):
 		self.status = "Submitted"
 		self.save()
+	
+	def before_submit(self):
+		from fieldservice.api import validate_work_duration
+		validate_work_duration(self)
+		pass
 		

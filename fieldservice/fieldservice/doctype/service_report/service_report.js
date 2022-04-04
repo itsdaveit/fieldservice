@@ -4,6 +4,26 @@
 
 
 frappe.ui.form.on('Service Report', {
+    setup: function(frm) {
+		frm.set_query("customer", function() {
+			return {
+				"filters": {
+					"disabled":  0
+                }
+			}
+		});
+	},
+    // onload: function(frm) {
+	// 	frm.set_query("query", function() {
+	// 		return {
+	// 			"filters": {
+	// 				"disabled":  0
+    //             }
+	// 		}
+	// 	});
+	// },
+
+
     scan_barcode: function(frm) {
         let transaction_controller= new erpnext.TransactionController({frm});
         transaction_controller.scan_barcode();

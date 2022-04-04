@@ -1,9 +1,11 @@
 from __future__ import unicode_literals
 
 import json
+from time import strftime, strptime
 import frappe
 import frappe.handler
 import frappe.client
+from datetime import datetime
 
 def get_work_units_for_position(work_position, report_type):
     #Logic for rounding and minimum Quantity: (TBD)
@@ -16,6 +18,10 @@ def get_work_units_for_position(work_position, report_type):
     return False
 
 def get_amount_of_hours(begin, end, report_doc):
+    if type(begin) == str:
+        begin = datetime.fromisoformat(str(begin))
+    if type(end) == str:
+        end = datetime.fromisoformat(str(end))
     timediff = end - begin
     print("beginn: " + str(begin) + " end: " + str(end))
     modulus = (timediff.seconds / 3600) % 1
@@ -143,6 +149,14 @@ def create_delivery_note(service_report):
     else:
         frappe.msgprint("Lieferschein <a href=\"/desk#Form/Delivery%20Note/" + report_doc.delivery_note + "\">" + report_doc.delivery_note + "</a> bereits vorhanden.")
 
+def validate_work_duration(report_doc):
+    settings = frappe.get_single("Fieldservice Settings")
+    for work_position in report_doc.work:
+        qty = get_amount_of_hours(work_position.begin, work_position.end, report_doc)
+        if qty > settings.max_work_duration:
+            print(work_position.idx)
+            frappe.throw("Work duration longer then expected.<br>Work Item No.: " + str(work_position.idx) + "<br>" + str(work_position.description))
+            
 
     
     
