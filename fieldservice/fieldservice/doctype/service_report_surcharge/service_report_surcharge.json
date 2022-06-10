@@ -1,0 +1,77 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2022-05-19 11:39:57.045731",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "customer",
+  "from_time",
+  "weekday",
+  "surcharge_in_percent",
+  "surcharge_per_hour",
+  "surcharge_per_assignment"
+ ],
+ "fields": [
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "from_time",
+   "fieldtype": "Time",
+   "in_list_view": 1,
+   "label": "from Time"
+  },
+  {
+   "fieldname": "weekday",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Weekday",
+   "options": "Monday\nTuesday\nWednesday\nThursday\nFriday\nSaturday\nSunday\nPublic holiday"
+  },
+  {
+   "fieldname": "surcharge_per_hour",
+   "fieldtype": "Data",
+   "label": "Surcharge per hour"
+  },
+  {
+   "fieldname": "surcharge_per_assignment",
+   "fieldtype": "Data",
+   "label": "Surcharge per assignment"
+  },
+  {
+   "fieldname": "surcharge_in_percent",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Surcharge in %"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2022-05-19 12:37:25.972228",
+ "modified_by": "Administrator",
+ "module": "Fieldservice",
+ "name": "Service Report Surcharge",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}
