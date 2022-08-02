@@ -49,6 +49,7 @@ def get_amount_of_hours(begin, end, report_doc):
 def get_work_item_description(item_code, description, begin, end):
     work_item_doc = frappe.get_doc("Item", item_code)
     item_description = work_item_doc.description + "<br>" + begin.strftime("%d.%m.%Y %H:%M") + " - " + end.strftime("%d.%m.%Y %H:%M") + " Uhr"
+    print("######", description)
     item_description = item_description + "<br>" + description
     
     return item_description
@@ -234,13 +235,13 @@ def create_delivery_note(service_report):
             report_doc.delivery_note = DN.name
             report_doc.status = "Delivered"
             report_doc.save()
-            frappe.msgprint("Lieferschein <a href=\"/desk#Form/Delivery%20Note/" + DN.name + "\">" + DN.name + "</a> erstellt.")
+            frappe.msgprint("Lieferschein <a href=\"/app/delivery-note/" + DN.name + "\">" + DN.name + "</a> erstellt.")
                 
         else:
             frappe.throw('Keine abrechenbaren Positionen vorhanden.')
     else:
-        frappe.msgprint("Lieferschein <a href=\"/desk#Form/Delivery%20Note/" + report_doc.delivery_note + "\">" + report_doc.delivery_note + "</a> bereits vorhanden.")
-
+        frappe.msgprint("Lieferschein <a href=\"/app/delivery-note/" + report_doc.delivery_note + "\">" + report_doc.delivery_note + "</a> bereits vorhanden.")
+                                        
 def validate_work_duration(report_doc):
     settings = frappe.get_single("Fieldservice Settings")
     for work_position in report_doc.work:
@@ -248,6 +249,22 @@ def validate_work_duration(report_doc):
         if qty > settings.max_work_duration:
             print(work_position.idx)
             frappe.throw("Work duration longer then expected.<br>Work Item No.: " + str(work_position.idx) + "<br>" + str(work_position.description))
+
+def validate_empty_work_description(report_doc):
+    for work_position in report_doc.work:
+        print("validate")
+        print(work_position.description)
+        if not work_position.description:
+            frappe.throw("Work description empty.<br>Work Item No.: " + str(work_position.idx))
+        if len(work_position.description) < 4:
+            frappe.throw("Work description too short.<br>Work Item No.: " + str(work_position.idx))
+
+def validate_start_before_end(report_doc):
+    for work_position in report_doc.work:
+        if work_position.begin == work_position.end:
+            frappe.throw("Work times are equal, check begin and end.<br>Work Item No.: " + str(work_position.idx))
+        if work_position.begin > work_position.end:
+            frappe.throw("Work beginn is after end, check begin and end.<br>Work Item No.: " + str(work_position.idx))
 
 def get_datetime_from_timedelta(time_delta_list,date_string):
     s_l_date =[]
