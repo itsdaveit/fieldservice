@@ -1,0 +1,102 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2022-07-28 08:09:28.670765",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "invoicing_grouped_by",
+  "close_invoiced_delivery_notes_section",
+  "close",
+  "invoices_from_delivery_notes_section",
+  "customer",
+  "get_invoice",
+  "settings_section",
+  "tc_name",
+  "payment_terms_template",
+  "taxes_and_charges"
+ ],
+ "fields": [
+  {
+   "fieldname": "invoices_from_delivery_notes_section",
+   "fieldtype": "Section Break",
+   "label": "Invoices from delivery notes"
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "get_invoice",
+   "fieldtype": "Button",
+   "label": "Get Invoice",
+   "options": "get_invoice_dict"
+  },
+  {
+   "fieldname": "settings_section",
+   "fieldtype": "Section Break",
+   "label": "Settings"
+  },
+  {
+   "fieldname": "tc_name",
+   "fieldtype": "Link",
+   "label": "Terms and Conditions",
+   "options": "Terms and Conditions"
+  },
+  {
+   "fieldname": "payment_terms_template",
+   "fieldtype": "Link",
+   "label": "Payment Terms Template",
+   "options": "Payment Terms Template"
+  },
+  {
+   "fieldname": "taxes_and_charges",
+   "fieldtype": "Link",
+   "label": "Taxes and Charges",
+   "options": "Sales Taxes and Charges Template"
+  },
+  {
+   "fieldname": "invoicing_grouped_by",
+   "fieldtype": "Select",
+   "label": "Invoicing grouped by",
+   "options": "\nService and Goods\nService and Goods and Sales Order"
+  },
+  {
+   "fieldname": "close_invoiced_delivery_notes_section",
+   "fieldtype": "Section Break",
+   "label": "Close invoiced Delivery Notes"
+  },
+  {
+   "fieldname": "close",
+   "fieldtype": "Button",
+   "label": "Close",
+   "options": "close_invoiced_delivery_notes"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2022-07-29 11:20:31.994243",
+ "modified_by": "Administrator",
+ "module": "Fieldservice",
+ "name": "Invoices from Delivery Notes",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}
