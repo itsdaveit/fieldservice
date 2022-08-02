@@ -245,6 +245,8 @@ def create_delivery_note(service_report):
 def validate_work_duration(report_doc):
     settings = frappe.get_single("Fieldservice Settings")
     for work_position in report_doc.work:
+        if not work_position.begin or not work_position.end:
+            frappe.throw("One Datetime is missing.<br>Work Item No.: " + str(work_position.idx))
         qty = get_amount_of_hours(work_position.begin, work_position.end, report_doc)
         if qty > settings.max_work_duration:
             print(work_position.idx)
@@ -265,6 +267,10 @@ def validate_start_before_end(report_doc):
             frappe.throw("Work times are equal, check begin and end.<br>Work Item No.: " + str(work_position.idx))
         if work_position.begin > work_position.end:
             frappe.throw("Work beginn is after end, check begin and end.<br>Work Item No.: " + str(work_position.idx))
+
+def validate_work_items(report_doc):
+    if not report_doc.work:
+        frappe.throw("No work items found.")
 
 def get_datetime_from_timedelta(time_delta_list,date_string):
     s_l_date =[]

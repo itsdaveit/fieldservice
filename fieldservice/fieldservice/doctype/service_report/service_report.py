@@ -14,9 +14,10 @@ class ServiceReport(Document):
 		self.save()
 	
 	def before_submit(self):
-		from fieldservice.api import validate_work_duration, validate_empty_work_description, validate_start_before_end
+		from fieldservice.api import validate_work_duration, validate_empty_work_description, validate_start_before_end, validate_work_items
 		validate_work_duration(self)
 		validate_empty_work_description(self)
 		validate_start_before_end(self)
+		validate_work_items(self)
 
 		
