@@ -3,6 +3,7 @@
 # For license information, please see license.txt
 
 from __future__ import unicode_literals
+from datetime import datetime
 import frappe
 from frappe.model.document import Document
 
@@ -20,4 +21,27 @@ class ServiceReport(Document):
 		validate_start_before_end(self)
 		validate_work_items(self)
 
-		
+
+@frappe.whitelist()
+def start_timer(service_report):
+	report_doc = frappe.get_doc("Service Report", service_report)
+	if report_doc.status == "Draft":
+		report_doc.timer_start = datetime.now()
+		report_doc.status = "Started"
+		report_doc.save()
+	else:
+		frappe.throw("Timer is not stopped. Can`t start the timmer.")
+
+
+@frappe.whitelist()
+def stop_timer(service_report):
+	report_doc = frappe.get_doc("Service Report", service_report)
+	if report_doc.status == "Started":
+		report_doc.timer_start = ""
+		report_doc.status = "Draft"
+		report_doc.save()
+	else:
+		frappe.throw("Timer is not started. Can`t stop the timmer.")
+	
+
+

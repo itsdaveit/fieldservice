@@ -13,15 +13,6 @@ frappe.ui.form.on('Service Report', {
 			}
 		});
 	},
-    // onload: function(frm) {
-	// 	frm.set_query("query", function() {
-	// 		return {
-	// 			"filters": {
-	// 				"disabled":  0
-    //             }
-	// 		}
-	// 	});
-	// },
 
 
     scan_barcode: function(frm) {
@@ -29,7 +20,11 @@ frappe.ui.form.on('Service Report', {
         transaction_controller.scan_barcode();
     },
 
+
 	refresh: function(frm) {
+        console.log(frm.doc.status)
+        console.log(frm.doc.docstatus)
+
         if(frm.doc.docstatus===1) {
             cur_frm.add_custom_button(__("Create Delivery Note"), function() {
                 frappe.call({
@@ -46,6 +41,43 @@ frappe.ui.form.on('Service Report', {
                 })
             });
         };
+        
+
+        if(frm.doc.status=="Draft" & !frm.is_new()) {
+            clearInterval();
+            cur_frm.add_custom_button(__("Start Timer"), function() {
+                frm.set_value("status", "Started")
+                frm.set_value("timer_start", frappe.datetime.now_datetime())
+                frm.save()
+            });
+            frm.change_custom_button_type("Start Timer", null, "success");
+            
+        };
+
+        if(frm.doc.status=="Started" & !frm.is_new()) {
+            let myInterval = setInterval(function() {
+                let currentdt = new Date()
+                let startdt = new Date(Date.parse(frm.doc.timer_start))
+                let diff = currentdt - startdt
+                document.getElementById("timer").innerHTML = currentdt + "<br>" + startdt + "<br>" + diff;
+            }, 1000);
+            cur_frm.add_custom_button(__("Stop Timer"), function() {
+                clearInterval(myInterval);
+                frappe.call({
+                    "method": "fieldservice.fieldservice.doctype.service_report.service_report.stop_timer",
+                    args: {
+                        "service_report": frm.doc.name,                        
+                    },
+                    callback: (response) => {
+                        console.log(response.message),
+                        frm.reload_doc()
+                    } 
+                })
+            });
+            frm.change_custom_button_type("Stop Timer", null, "danger");
+            frm.disable_save();
+        };
+        
     },
 	"employee" : function(frm) {
         frappe.call({
@@ -73,7 +105,6 @@ frappe.ui.form.on('Service Report', {
 });
 
 
-
 frappe.ui.form.on("Service Report Item", {
     item_code: function(frm, cdt, cdn) {
         var cur_doc = locals[cdt][cdn];
@@ -92,4 +123,3 @@ frappe.ui.form.on("Service Report Item", {
 
     }
 });
-
