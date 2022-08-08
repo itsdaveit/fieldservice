@@ -27,15 +27,35 @@ frappe.listview_settings['Service Report'] = {
 		
 		me.page.set_title(__("Service Report"));
     },
-    	
+
+    has_indicator_for_draft: true,
+
 	get_indicator: function (doc) {
-		if (doc.status === "Delivered") {
+        console.log("state")
+        console.log(doc.status)
+		if (doc.status == "Delivered") {
 			return [__("Delivered"), "green", "status,=,Delivered"];
-		} else if (doc.status === "Submitted") {
+		} else if (doc.status == "Submitted") {
 			return [__("Submitted"), "blue", "status,=,Submitted"];
-        } else if (doc.status === "Draft") {
-			return [__("Draft"), "orange", "status,=,Draft"];
+        } else if (doc.status == "Draft") {
+			return [__("Draft"), "red", "status,=,Draft"];
+        } else if (doc.status == "Started") {
+			return [__("Started"), "yellow", "status,=,Started"];
         }
-    }
+    },
+    button: {
+        show(doc) {
+            return doc.reference_name;
+        },
+        get_label() {
+            return 'View';
+        },
+        get_description(doc) {
+            return __('View {0}', [`${doc.reference_type} ${doc.reference_name}`])
+        },
+        action(doc) {
+            frappe.set_route('Form', doc.reference_type, doc.reference_name);
+        }
+    },
 
 }

@@ -7,6 +7,8 @@
  "engine": "InnoDB",
  "field_order": [
   "titel",
+  "timer_column_column",
+  "timer",
   "section_break_2",
   "report_data_section",
   "employee",
@@ -36,7 +38,10 @@
   "mandatory_section_section",
   "company",
   "delivery_note",
-  "status"
+  "status",
+  "aditional_info_section",
+  "timer_status",
+  "timer_start"
  ],
  "fields": [
   {
@@ -218,9 +223,8 @@
    "in_list_view": 1,
    "label": "Status",
    "no_copy": 1,
-   "options": "Draft\nSubmitted\nDelivered",
+   "options": "Draft\nSubmitted\nDelivered\nStarted\nBlub",
    "print_hide": 1,
-   "read_only": 1,
    "reqd": 1,
    "search_index": 1
   },
@@ -229,11 +233,38 @@
    "fieldtype": "Data",
    "label": "Scan Barcode",
    "options": "Barcode"
+  },
+  {
+   "default": "stopped",
+   "fieldname": "timer_status",
+   "fieldtype": "Data",
+   "label": "Timer Status"
+  },
+  {
+   "fieldname": "timer_start",
+   "fieldtype": "Datetime",
+   "label": "Timer Start"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "aditional_info_section",
+   "fieldtype": "Section Break",
+   "label": "Aditional Info"
+  },
+  {
+   "fieldname": "timer_column_column",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "timer",
+   "fieldtype": "HTML",
+   "label": "timer",
+   "options": "<div class=\"container\" id=\"timer\"></div>"
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2022-01-11 13:34:18.405313",
+ "modified": "2022-08-08 23:25:08.939855",
  "modified_by": "Administrator",
  "module": "Fieldservice",
  "name": "Service Report",
