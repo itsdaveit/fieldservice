@@ -1,9 +1,41 @@
 // Copyright (c) 2019, itsdve GmbH and contributors
 // For license information, please see license.txt
 
+let sr_report_Interval;
+
+function padTo2Digits(num) {
+    return num.toString().padStart(2, '0');
+  }
+  
+
+function convertMsToTime(milliseconds) {
+    let seconds = Math.floor(milliseconds / 1000);
+    let minutes = Math.floor(seconds / 60);
+    let hours = Math.floor(minutes / 60);
+  
+    seconds = seconds % 60;
+    minutes = minutes % 60;
+  
+    // 👇️ If you don't want to roll hours over, e.g. 24 to 00
+    // 👇️ comment (or remove) the line below
+    // commenting next line gets you `24:00:00` instead of `00:00:00`
+    // or `36:15:31` instead of `12:15:31`, etc.
+    hours = hours % 24;
+  
+    return `${padTo2Digits(hours)}:${padTo2Digits(minutes)}:${padTo2Digits(
+      seconds,
+    )}`;
+  }
+  
+
+function format_timer(duration) {
+    return "<h1 class='display-4' style='margin-bottom: 0px;'>" + duration + "</h1>"
+}
 
 
 frappe.ui.form.on('Service Report', {
+
+
     setup: function(frm) {
 		frm.set_query("customer", function() {
 			return {
@@ -22,8 +54,10 @@ frappe.ui.form.on('Service Report', {
 
 
 	refresh: function(frm) {
-        console.log(frm.doc.status)
-        console.log(frm.doc.docstatus)
+
+        if (sr_report_Interval != frm.doc.current_sr_report_Interval) {
+            clearInterval(sr_report_Interval);
+        }
 
         if(frm.doc.docstatus===1) {
             cur_frm.add_custom_button(__("Create Delivery Note"), function() {
@@ -32,7 +66,6 @@ frappe.ui.form.on('Service Report', {
                     args: {
                         "service_report": frm.doc.name,
                         "customer": frm.doc.customer
-                        
                     },
                     callback: (response) => {
                         console.log(response.message),
@@ -55,24 +88,42 @@ frappe.ui.form.on('Service Report', {
         };
 
         if(frm.doc.status=="Started" & !frm.is_new()) {
-            let myInterval = setInterval(function() {
+            let current_sr_report_Interval = setInterval(function() {
                 let currentdt = new Date()
                 let startdt = new Date(Date.parse(frm.doc.timer_start))
                 let diff = currentdt - startdt
-                document.getElementById("timer").innerHTML = currentdt + "<br>" + startdt + "<br>" + diff;
+                let duration = convertMsToTime(diff)
+                document.getElementById("timer").innerHTML = format_timer(duration);
             }, 1000);
+            sr_report_Interval = current_sr_report_Interval
             cur_frm.add_custom_button(__("Stop Timer"), function() {
-                clearInterval(myInterval);
-                frappe.call({
-                    "method": "fieldservice.fieldservice.doctype.service_report.service_report.stop_timer",
-                    args: {
-                        "service_report": frm.doc.name,                        
-                    },
-                    callback: (response) => {
-                        console.log(response.message),
-                        frm.reload_doc()
-                    } 
-                })
+                let d = new frappe.ui.Dialog({
+                    title: 'Enter details',
+                    fields: [
+                        {
+                            label: 'Description for Work',
+                            fieldname: 'description',
+                            fieldtype: 'Text Editor'
+                        }
+                    ],
+                    primary_action_label: 'Submit',
+                    primary_action(values) {
+                        frappe.call({
+                            "method": "fieldservice.fieldservice.doctype.service_report.service_report.stop_timer",
+                            args: {
+                                "service_report": frm.doc.name,
+                                "description": values.description               
+                            },
+                            callback: (response) => {
+                                clearInterval(sr_report_Interval),
+                                d.hide(),
+                                console.log(response.message),
+                                frm.reload_doc()
+                            } 
+                        })
+                    }
+                });
+                d.show()
             });
             frm.change_custom_button_type("Stop Timer", null, "danger");
             frm.disable_save();
@@ -123,3 +174,4 @@ frappe.ui.form.on("Service Report Item", {
 
     }
 });
+

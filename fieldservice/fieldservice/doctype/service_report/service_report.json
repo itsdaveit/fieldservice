@@ -259,12 +259,12 @@
    "fieldname": "timer",
    "fieldtype": "HTML",
    "label": "timer",
-   "options": "<div id=\"timer\"></div>"
+   "options": "<div class=\"container\" id=\"timer\"></div>"
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2022-08-03 01:18:30.948735",
+ "modified": "2022-08-08 23:25:08.939855",
  "modified_by": "Administrator",
  "module": "Fieldservice",
  "name": "Service Report",

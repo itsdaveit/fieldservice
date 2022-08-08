@@ -6,8 +6,7 @@ from __future__ import unicode_literals
 from datetime import datetime
 import frappe
 from frappe.model.document import Document
-
-
+from frappe import _
 
 class ServiceReport(Document):
 	def on_submit(self):
@@ -34,12 +33,21 @@ def start_timer(service_report):
 
 
 @frappe.whitelist()
-def stop_timer(service_report):
+def stop_timer(service_report, description):
 	report_doc = frappe.get_doc("Service Report", service_report)
 	if report_doc.status == "Started":
+		duration = datetime.now() -  report_doc.timer_start
+		work_doc = frappe.get_doc({
+			"doctype": "Service Report Work",
+			"begin": report_doc.timer_start,
+			"end": datetime.now(),
+			"description": description if description != """<div class="ql-editor read-mode"><p><br></p></div>""" else _("Entry created by timer. Replace with work description.")
+			})
+		report_doc.append("work", work_doc)
 		report_doc.timer_start = ""
 		report_doc.status = "Draft"
 		report_doc.save()
+
 	else:
 		frappe.throw("Timer is not started. Can`t stop the timmer.")
 	
