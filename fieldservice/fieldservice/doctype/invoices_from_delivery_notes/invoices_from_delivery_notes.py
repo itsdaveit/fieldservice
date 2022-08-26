@@ -124,7 +124,7 @@ class InvoicesfromDeliveryNotes(Document):
 						print(dn["name"])
 						print(item.qty)
 						print(item.uom)
-						if item.item_group == "Dienstleistungen" or item.item_group == "Anfahrten" or item.item_group == "Arbeitszeiten Techniker":
+						if item.item_group == "Dienstleistungen" or item.item_group == "Anfahrten" or item.item_group == "Arbeitszeiten Techniker" or item.item_group == "Anwendungsentwicklung":
 							service_items.append(invoice_doc_item)
 						elif item.against_sales_order:
 							sales_order_items.append(invoice_doc_item)
@@ -165,7 +165,12 @@ class InvoicesfromDeliveryNotes(Document):
 				"items": invoice_doc_items
 				}) 
 		if len(invoice_doc_items)>0:
-			invoice_doc.payment_terms_template = self.payment_terms_template
+			customer_doc = frappe.get_doc("Customer", cust )
+        
+			if customer_doc.payment_terms:
+				invoice_doc.payment_terms_template = customer_doc.payment_terms
+			else:
+				invoice_doc.payment_terms_template = self.payment_terms_template
 			invoice_doc.tc_name = self.tc_name
 			tac_doc = frappe.get_doc("Terms and Conditions", self.tc_name)
 			invoice_doc.terms = tac_doc.terms
