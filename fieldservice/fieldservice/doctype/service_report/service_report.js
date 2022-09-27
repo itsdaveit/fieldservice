@@ -62,7 +62,7 @@ frappe.ui.form.on('Service Report', {
         if(frm.doc.docstatus===1) {
             cur_frm.add_custom_button(__("Create Delivery Note"), function() {
                 frappe.call({
-                    "method": "fieldservice.api.create_delivery_note",
+                    "method": "fieldservice.api.insert_surchargs_in_delivery_note",
                     args: {
                         "service_report": frm.doc.name,
                         "customer": frm.doc.customer
@@ -172,6 +172,14 @@ frappe.ui.form.on("Service Report Item", {
 		})
         
 
+    }
+});
+frappe.ui.form.on('Service Report Work',{ 
+    work_add(frm, cdt, cdn) {
+        let address = frm.doc.customer_address   
+        console.log("Work Item hinzugefügt") 
+        frappe.model.set_value (cdt,cdn,"address" , address)
+        cur_frm.refresh_field("work");
     }
 });
 

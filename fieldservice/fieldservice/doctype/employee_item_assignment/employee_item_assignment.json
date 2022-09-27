@@ -1,4 +1,5 @@
 {
+ "actions": [],
  "autoname": "EIA-.####",
  "creation": "2019-12-17 00:38:48.163603",
  "doctype": "DocType",
@@ -26,7 +27,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Service Type",
-   "options": "On-Site Service\nRemote Service"
+   "options": "On-Site Service\nRemote Service\nApplication Development\nSurcharge"
   },
   {
    "fieldname": "item",
@@ -51,7 +52,8 @@
    "label": "Item Name"
   }
  ],
- "modified": "2019-12-17 00:53:28.346552",
+ "links": [],
+ "modified": "2022-09-27 10:41:36.758976",
  "modified_by": "Administrator",
  "module": "Fieldservice",
  "name": "Employee Item Assignment",

@@ -1,6 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "SRS-.#####",
  "creation": "2022-05-19 11:39:57.045731",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -52,7 +53,8 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2022-05-19 12:37:25.972228",
+ "migration_hash": "86da728e8d27ada18e2c3460983adf94",
+ "modified": "2022-09-14 12:03:08.944900",
  "modified_by": "Administrator",
  "module": "Fieldservice",
  "name": "Service Report Surcharge",
