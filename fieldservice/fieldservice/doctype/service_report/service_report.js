@@ -176,9 +176,13 @@ frappe.ui.form.on("Service Report Item", {
 });
 frappe.ui.form.on('Service Report Work',{ 
     work_add(frm, cdt, cdn) {
-        let address = frm.doc.customer_address   
+        let address = frm.doc.customer_address,
+            service_type = frm.doc.report_type
+        console.log(service_type)   
         console.log("Work Item hinzugefügt") 
+        frappe.model.set_value(cdt,cdn,"service_type",service_type)
         frappe.model.set_value (cdt,cdn,"address" , address)
+
         cur_frm.refresh_field("work");
     }
 });
