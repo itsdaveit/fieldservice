@@ -115,6 +115,7 @@ class InvoicesfromDeliveryNotes(Document):
 							"qty": item.qty,
 							"uom" : item.uom,
 							"rate": item.rate,
+							"sales_order": item.against_sales_order,
 							"dn_detail": item.name,
 							"parent": "delivery_note",
 							"delivery_note": dn["name"]
@@ -138,9 +139,19 @@ class InvoicesfromDeliveryNotes(Document):
 				self.create_invoice(cust, service_items, "Dienstleistung " + cust_doc.customer_name)
 				if len(service_items) > 0:	
 					invoice_count += 1
-				self.create_invoice(cust, sales_order_items, "Sales Order " + cust_doc.customer_name)	
+				#self.create_invoice(cust, sales_order_items, "Sales Order " + cust_doc.customer_name)	
 				if len(sales_order_items) > 0:
-					invoice_count += 1
+					print("Sales Order Check")
+					x = [i.sales_order for i in sales_order_items]
+					print(x)
+					a = list(set(x))
+					for el in a:
+						sal_ord_it = []
+						for i in sales_order_items:
+							if i.sales_order == el:
+								sal_ord_it.append(i)
+						self.create_invoice(cust, sal_ord_it, "Sales Order "+ el+ " " + cust_doc.customer_name)
+						invoice_count += 1
 			elif self.invoicing_grouped_by == "Service and Goods":
 				invoice_item = sales_order_items + goods_items
 				self.create_invoice(cust, invoice_item, "Ware " + cust_doc.customer_name)
