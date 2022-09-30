@@ -163,7 +163,8 @@ def get_item_from_surcharge_in_percent(surcharge_dict,employee):
                 print(surcharge_item)
                 item_code = surcharge_item.name
                 
-                a = surcharge_item.description +" " + el.surcharge_in_percent + "%"
+                a = surcharge_item.description.strip("<p><div>").strip("</p></div>") + " "+ el.surcharge_in_percent + "%"
+                print(a)
                 # print(surcharge_item.item_code)
                 # print(surcharge_item.item_name)
                 delivery_note_item = frappe.get_doc({"doctype": "Delivery Note Item",
@@ -179,6 +180,7 @@ def get_item_from_surcharge_in_percent(surcharge_dict,employee):
                                                  
                 #print(delivery_note_item.description)
                 delivery_note_item.description = get_surcharge_item_description(item_code,a,el.begin, el.end)
+                print("Description")
                 print(delivery_note_item.description)
                 delivery_note_items.append(delivery_note_item)
                 
