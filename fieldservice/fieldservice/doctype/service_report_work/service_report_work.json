@@ -13,6 +13,8 @@
   "service_type",
   "travel_charges",
   "address",
+  "ignore_surcharges",
+  "without_surcharge_reason",
   "internal_remarks"
  ],
  "fields": [
@@ -45,7 +47,7 @@
    "columns": 5,
    "fieldname": "hours",
    "fieldtype": "Float",
-   "label": "hours",
+   "label": "Hours",
    "print_hide": 1
   },
   {
@@ -79,11 +81,23 @@
    "fieldtype": "Link",
    "label": "Address",
    "options": "Address"
+  },
+  {
+   "default": "0",
+   "fieldname": "ignore_surcharges",
+   "fieldtype": "Check",
+   "label": "Without Surcharge"
+  },
+  {
+   "fieldname": "without_surcharge_reason",
+   "fieldtype": "Small Text",
+   "label": "Without Surcharge Reason"
   }
  ],
  "istable": 1,
  "links": [],
- "modified": "2022-09-27 13:10:07.291595",
+ "migration_hash": "84f49ca2f01df2c479a912ded47519a7",
+ "modified": "2023-02-14 14:15:53.085126",
  "modified_by": "Administrator",
  "module": "Fieldservice",
  "name": "Service Report Work",

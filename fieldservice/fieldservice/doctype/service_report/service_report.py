@@ -7,6 +7,7 @@ from datetime import datetime
 import frappe
 from frappe.model.document import Document
 from frappe import _
+from fieldservice.api import get_amount_of_hours
 
 class ServiceReport(Document):
 	def on_submit(self):
@@ -19,6 +20,16 @@ class ServiceReport(Document):
 		validate_empty_work_description(self)
 		validate_start_before_end(self)
 		validate_work_items(self)
+	
+	def before_save(self):
+		hours_list = []
+		for workposition in self.work:
+			hours = get_amount_of_hours(workposition.begin, workposition.end)
+			workposition.hours = hours 
+			hours_list.append(hours)
+		hours_sum = sum(hours_list)
+		self.hours_sum = hours_sum
+		
 
 
 @frappe.whitelist()

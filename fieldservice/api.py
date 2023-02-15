@@ -17,7 +17,7 @@ def get_work_units_for_position(work_position, report_type):
 
     return False
 
-def get_amount_of_hours(begin, end, report_doc):
+def get_amount_of_hours(begin, end):
     if type(begin) == str:
         begin = datetime.fromisoformat(str(begin)) 
     if type(end) == str:
@@ -80,9 +80,10 @@ def get_items_from_sr_work(work_positions, report_doc):
 
     
     for work_position in work_positions:
+        settings = frappe.get_single("Fieldservice Settings")
         print("Work Position Details")
         print(work_position.service_type,work_position.travel_charges)
-        if work_position.service_type == "On-Site Service" and work_position.travel_charges == 1:
+        if work_position.service_type != "Remote Service" and work_position.travel_charges == 1:
             travel_costs_item = create_travel_item(work_position.address)
             if travel_costs_item:
                 delivery_note_items.append(travel_costs_item)
@@ -90,12 +91,13 @@ def get_items_from_sr_work(work_positions, report_doc):
                 frappe.throw("Zu der ausgewählten Adresse <a href=\"/app/address/" + work_position.address + "\">" + work_position.address +"</a> wurde noch kein Anfahrt-Item hinzugefügt")
               
         #print(travel_costs_item)
-        qty = get_amount_of_hours(work_position.begin, work_position.end, report_doc)
+        qty = get_amount_of_hours(work_position.begin, work_position.end)
         delivery_note_item = frappe.get_doc({"doctype": "Delivery Note Item",
                                                 "item_code": item_code,
                                                 "description": work_position.description,
                                                 "qty": qty,
                                                 "agains_service_report": report_doc.name,
+                                                "ignore_surcharges":work_position.ignore_surcharges,
                                                 "against_service_report_item":work_position.name,
                                                 "service_report_item_begin": work_position.begin,
                                                 "service_report_item_end": work_position.end,
@@ -104,7 +106,9 @@ def get_items_from_sr_work(work_positions, report_doc):
        
         
         delivery_note_item.description = get_work_item_description(item_code, work_position.description, work_position.begin, work_position.end)
-        #print("###delivery_note_item####")
+        # if work_position.ignore_surcharges == 1:
+        #     delivery_note_item.description = delivery_note_item.description + "<br>"+settings.ignore_surcharges_text
+        # #print("###delivery_note_item####")
         #print(delivery_note_item.name)
         delivery_note_items.append(delivery_note_item)
     return delivery_note_items
@@ -298,7 +302,7 @@ def validate_work_duration(report_doc):
     for work_position in report_doc.work:
         if not work_position.begin or not work_position.end:
             frappe.throw("One Datetime is missing.<br>Work Item No.: " + str(work_position.idx))
-        qty = get_amount_of_hours(work_position.begin, work_position.end, report_doc)
+        qty = get_amount_of_hours(work_position.begin, work_position.end)
         if qty > settings.max_work_duration:
             #print(work_position.idx)
             frappe.throw("Work duration longer then expected.<br>Work Item No.: " + str(work_position.idx) + "<br>" + str(work_position.description))
@@ -480,7 +484,8 @@ def insert_surchargs_in_delivery_note(service_report):
             print(count)
             item.idx = count
             price = item.rate
-            if item.agains_service_report:
+            if item.agains_service_report and item.ignore_surcharges == 0:
+                
                 surcharges_timeline = get_surcharges_timeline(surcharges_fur_current_surcharge_Determination, item)[0]
                 sorted_work_time_line = add_work_data_to_timeline(surcharges_timeline, item)
                 start_surcharge = get_start_surcharge(surcharges_timeline,item)
@@ -589,7 +594,7 @@ def create_surcharge_dict_for_work(relevant_surcharge_dict,sorted_work_time_line
         index_previous_el = next((i for i, x in enumerate(relevant_surcharge_dict) if x["from_time"] == previous_element), None)
         next_el = sorted_work_time_line[sorted_work_time_line.index(el)+1]
         surcharge_dict = relevant_surcharge_dict[index_previous_el]
-        qty = get_amount_of_hours(el, next_el, report_doc)
+        qty = get_amount_of_hours(el, next_el)
         surcharge_dict["qty"] = qty
         surcharge_dict["begin"] = el
         surcharge_dict["end"] = next_el

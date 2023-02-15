@@ -25,6 +25,7 @@
   "column_break_11",
   "work_performed_section",
   "work",
+  "hours_sum",
   "items_delivered_section",
   "scan_barcode",
   "items",
@@ -260,11 +261,17 @@
    "fieldtype": "HTML",
    "label": "timer",
    "options": "<div class=\"container\" id=\"timer\"></div>"
+  },
+  {
+   "fieldname": "hours_sum",
+   "fieldtype": "Float",
+   "label": "Hours Sum"
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2022-08-08 23:25:08.939855",
+ "migration_hash": "8092e1a1770c03271f97ddbbd432802f",
+ "modified": "2023-02-14 13:57:46.261425",
  "modified_by": "Administrator",
  "module": "Fieldservice",
  "name": "Service Report",

@@ -52,7 +52,11 @@ frappe.ui.form.on('Service Report', {
         transaction_controller.scan_barcode();
     },
 
-
+    onload: function(frm){
+        frm.trigger('employee')
+        frm.trigger('customer')
+        
+    },
 	refresh: function(frm) {
 
         if (sr_report_Interval != frm.doc.current_sr_report_Interval) {
@@ -178,10 +182,16 @@ frappe.ui.form.on('Service Report Work',{
     work_add(frm, cdt, cdn) {
         let address = frm.doc.customer_address,
             service_type = frm.doc.report_type
+            index = frappe.model.get_value(cdt,cdn,"idx")
         console.log(service_type)   
-        console.log("Work Item hinzugefügt") 
+        console.log("Work Item hinzugefügt")
+         
         frappe.model.set_value(cdt,cdn,"service_type",service_type)
         frappe.model.set_value (cdt,cdn,"address" , address)
+        if (service_type === "On-Site Service" && index ===1){
+            frappe.model.set_value(cdt,cdn,"travel_charges",1)   
+
+        }
 
         cur_frm.refresh_field("work");
     }
