@@ -52,9 +52,16 @@ def stop_timer(service_report, description):
 			"doctype": "Service Report Work",
 			"begin": report_doc.timer_start,
 			"end": datetime.now(),
-			"description": description if description != """<div class="ql-editor read-mode"><p><br></p></div>""" else _("Entry created by timer. Replace with work description.")
+			"description": description if description != """<div class="ql-editor read-mode"><p><br></p></div>""" else _("Entry created by timer. Replace with work description."),
+			"service_type" : report_doc.report_type,
+			"address": report_doc.customer_address
 			})
 		report_doc.append("work", work_doc)
+		for work in report_doc.work:
+			if work == work_doc:
+				num_work = work.idx
+				if num_work == 1 and work.service_type == "On-Site Service":
+					work.travel_charges = 1
 		report_doc.timer_start = ""
 		report_doc.status = "Draft"
 		report_doc.save()
