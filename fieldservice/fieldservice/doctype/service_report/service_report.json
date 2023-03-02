@@ -22,7 +22,11 @@
   "address_display",
   "section_break_9",
   "report_type",
-  "column_break_11",
+  "column_break_17",
+  "reference_document_type",
+  "reference_document_id",
+  "checklists_section",
+  "checklists",
   "work_performed_section",
   "work",
   "hours_sum",
@@ -93,10 +97,6 @@
    "fieldtype": "Select",
    "label": "Report Type",
    "options": "Remote Service\nOn-Site Service"
-  },
-  {
-   "fieldname": "column_break_11",
-   "fieldtype": "Column Break"
   },
   {
    "allow_in_quick_entry": 1,
@@ -263,6 +263,33 @@
    "options": "<div class=\"container\" id=\"timer\"></div>"
   },
   {
+   "fieldname": "reference_document_type",
+   "fieldtype": "Link",
+   "label": "Reference Document Type",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "reference_document_id",
+   "fieldtype": "Dynamic Link",
+   "label": "Reference Document ID",
+   "options": "reference_document_type"
+  },
+  {
+   "fieldname": "column_break_17",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "checklists_section",
+   "fieldtype": "Section Break",
+   "label": "Checklists"
+  },
+  {
+   "fieldname": "checklists",
+   "fieldtype": "Table",
+   "label": "Checklists",
+   "options": "Service Report Connected Checklist"
+  },
+  {
    "fieldname": "hours_sum",
    "fieldtype": "Float",
    "label": "Hours Sum"
@@ -270,8 +297,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "migration_hash": "8092e1a1770c03271f97ddbbd432802f",
- "modified": "2023-02-14 13:57:46.261425",
+ "modified": "2022-08-08 23:25:08.939855",
  "modified_by": "Administrator",
  "module": "Fieldservice",
  "name": "Service Report",
