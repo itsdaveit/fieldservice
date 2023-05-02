@@ -98,7 +98,6 @@
    "options": "Remote Service\nOn-Site Service"
   },
   {
-   "allow_in_quick_entry": 1,
    "fieldname": "work_performed_section",
    "fieldtype": "Section Break",
    "label": "Work Performed"
@@ -186,6 +185,7 @@
    "label": "Contact E-Mail"
   },
   {
+   "allow_in_quick_entry": 1,
    "fieldname": "titel",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -225,7 +225,6 @@
    "no_copy": 1,
    "options": "Draft\nSubmitted\nDelivered\nStarted\nBlub",
    "print_hide": 1,
-   "reqd": 1,
    "search_index": 1
   },
   {
@@ -291,7 +290,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2023-05-02 21:42:43.863430",
+ "modified": "2023-05-03 00:45:50.445823",
  "modified_by": "Administrator",
  "module": "Fieldservice",
  "name": "Service Report",
@@ -325,6 +324,7 @@
    "write": 1
   }
  ],
+ "quick_entry": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
  "track_changes": 1
