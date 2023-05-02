@@ -29,7 +29,6 @@ class ServiceReport(Document):
 			hours_list.append(hours)
 		hours_sum = sum(hours_list)
 		self.hours_sum = hours_sum
-		
 
 
 @frappe.whitelist()
@@ -68,6 +67,16 @@ def stop_timer(service_report, description):
 
 	else:
 		frappe.throw("Timer is not started. Can`t stop the timmer.")
-	
+
+@frappe.whitelist()
+def toggle_timer(service_report):
+	report_doc = frappe.get_doc("Service Report", service_report)
+	if report_doc.status == "Started":
+		description = _("Entry created by List View button. Replace with work description.")
+		stop_timer(service_report, description)
+		return "Timer stopped"
+	if report_doc.status == "Draft":
+		start_timer(service_report)
+		return "Timer started"
 
 

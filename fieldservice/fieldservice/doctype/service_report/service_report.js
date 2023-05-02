@@ -84,8 +84,16 @@ frappe.ui.form.on('Service Report', {
             clearInterval();
             cur_frm.add_custom_button(__("Start Timer"), function() {
                 frm.set_value("status", "Started")
-                frm.set_value("timer_start", frappe.datetime.now_datetime())
-                frm.save()
+                frappe.call({
+                    "method": "fieldservice.fieldservice.doctype.service_report.service_report.start_timer",
+                    args: {
+                        "service_report": frm.doc.name,             
+                    },
+                    callback: (response) => {
+                        frm.reload_doc()
+                    } 
+                })
+    
             });
             frm.change_custom_button_type("Start Timer", null, "success");
             
