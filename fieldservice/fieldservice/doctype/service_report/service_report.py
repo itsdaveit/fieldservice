@@ -24,9 +24,10 @@ class ServiceReport(Document):
 	def before_save(self):
 		hours_list = []
 		for workposition in self.work:
-			hours = get_amount_of_hours(workposition.begin, workposition.end)
-			workposition.hours = hours 
-			hours_list.append(hours)
+			if workposition.begin and workposition.end:
+				hours = get_amount_of_hours(workposition.begin, workposition.end)
+				workposition.hours = hours 
+				hours_list.append(hours)
 		hours_sum = sum(hours_list)
 		self.hours_sum = hours_sum
 
