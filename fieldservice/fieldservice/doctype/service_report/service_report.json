@@ -27,6 +27,7 @@
   "reference_document_id",
   "work_performed_section",
   "work",
+  "hours_sum",
   "items_delivered_section",
   "scan_barcode",
   "items",
@@ -259,6 +260,11 @@
    "fieldtype": "HTML",
    "label": "timer",
    "options": "<div class=\"container\" id=\"timer\"></div>"
+  },
+  {
+   "fieldname": "hours_sum",
+   "fieldtype": "Float",
+   "label": "Hours Sum"
   },
   {
    "fieldname": "reference_document_type",
