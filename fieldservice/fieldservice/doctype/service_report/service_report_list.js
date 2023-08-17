@@ -48,7 +48,7 @@ frappe.listview_settings['Service Report'] = {
                     frappe.route_options = {
                         "employee": r.message.name,
                         "docstatus": "Open",
-                        "status": "Draft"
+                        "status": ["in", ["Draft", "Started"]]
 
                     };
                     console.log(r.message.name)
