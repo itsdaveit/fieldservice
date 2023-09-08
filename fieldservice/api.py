@@ -117,7 +117,7 @@ def get_items_from_sr_work(work_positions, report_doc):
 def create_travel_item(address):
 
     address_doc = frappe.get_doc("Address",address)
-    print(address_doc.parent)
+    #print(address_doc.parent)
     item_name = address_doc.travel_costs_item
     if item_name:
         item = frappe.get_doc("Item",item_name)
