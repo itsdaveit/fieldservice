@@ -120,3 +120,11 @@ app_license = "MIT"
 # 	"frappe.desk.doctype.event.event.get_events": "fieldservice.event.get_events"
 # }
 
+fixtures = [
+    {
+        "doctype": "Print Format",
+        "filters": {
+            "name": "Default Service Report"
+        }
+    }
+]

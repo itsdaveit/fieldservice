@@ -20,6 +20,9 @@
   "customer_name",
   "contact_email",
   "address_display",
+  "auftragsdetails",
+  "externe_auftragsnummer",
+  "auftrag",
   "section_break_9",
   "report_type",
   "column_break_17",
@@ -37,8 +40,10 @@
   "remarks",
   "signatures_section",
   "signature_technician",
+  "unterschrift_auftragnehmer",
   "column_break_8",
   "technician",
+  "unterschrift_kunde",
   "amended_from",
   "mandatory_section_section",
   "company",
@@ -292,11 +297,38 @@
    "fieldtype": "Table",
    "label": "Checklists",
    "options": "Service Report Connected Checklist"
+  },
+  {
+   "fieldname": "auftragsdetails",
+   "fieldtype": "Section Break",
+   "label": "Auftragsdetails"
+  },
+  {
+   "fieldname": "auftrag",
+   "fieldtype": "Text Editor",
+   "label": "Arbeitsauftrag"
+  },
+  {
+   "fieldname": "externe_auftragsnummer",
+   "fieldtype": "Data",
+   "label": "Externe Auftragsnummer"
+  },
+  {
+   "fieldname": "unterschrift_auftragnehmer",
+   "fieldtype": "HTML",
+   "label": "Unterschrift Auftragnehmer",
+   "options": "<p style=\"text-align: center;\">Unterschrift Auftragnehmer/Monteur</p>"
+  },
+  {
+   "fieldname": "unterschrift_kunde",
+   "fieldtype": "HTML",
+   "label": "Unterschrift Kunde",
+   "options": "<p style=\"text-align: center;\">Unterschrift Kunde</p>"
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2023-05-03 00:45:50.445823",
+ "modified": "2023-10-09 08:20:47.806539",
  "modified_by": "Administrator",
  "module": "Fieldservice",
  "name": "Service Report",
