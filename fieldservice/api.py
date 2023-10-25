@@ -84,7 +84,10 @@ def get_items_from_sr_work(work_positions, report_doc):
         print("Work Position Details")
         print(work_position.service_type,work_position.travel_charges)
         if work_position.service_type != "Remote Service" and work_position.travel_charges == 1:
-            travel_costs_item = create_travel_item(work_position.address)
+            if work_position.address:
+                travel_costs_item = create_travel_item(work_position.address)
+            else:
+                travel_costs_item = create_travel_item(report_doc.customer_address)
             if travel_costs_item:
                 delivery_note_items.append(travel_costs_item)
             else:
@@ -325,6 +328,12 @@ def validate_start_before_end(report_doc):
 def validate_work_items(report_doc):
     if not report_doc.work:
         frappe.throw("No work items found.")
+
+def validate_empty_work_item_address(report_doc):
+    for work_position in report_doc.work:
+        if work_position.service_type == "On-Site Service" and work_position.travel_charges == 1 and not work_position.address:
+            frappe.throw("No work item address found.<br>Work Item No.: " + str(work_position.idx))
+
 
 def get_datetime_from_timedelta(time_delta_list,date_string):
     s_l_date =[]

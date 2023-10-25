@@ -142,20 +142,91 @@ frappe.ui.form.on('Service Report', {
         };
         
     },
-	"employee" : function(frm) {
-        frappe.call({
-            "method": "frappe.client.get",
-            args: {
-                doctype: "Employee",
-                name: frm.doc.employee
-			},
-			callback: function (data) {
-                frappe.model.set_value(frm.doctype,
-                    frm.docname, "employee_name",
-                    data.message.employee_name)
-			}
-		})
-	},
+
+    "employee": function(frm) {
+        
+        if (!frm.doc.employee) {
+            frappe.call({
+                method: "frappe.client.get_value",
+                async: false,
+                args: {
+                    doctype: 'Employee',
+                    filters: {
+                        user_id: frappe.user.name
+                    },
+                    fieldname: ['employee_name']
+                },
+                callback: function(r) {
+                    if (r.message !== undefined) {
+                        frappe.model.set_value(frm.doctype, frm.docname, "employee_name", r.message.employee_name);
+                    }
+                }
+            });
+        }
+        if (frm.doc.employee) {
+            frappe.call({
+                "method": "frappe.client.get_value",
+                async: false,
+                args: {
+                    doctype: "Employee",
+                    filters: {
+                        name: frm.doc.employee
+                    },
+                    fieldname: ['employee_name']
+                    
+                },
+                callback: function (data) {
+                    frappe.model.set_value(frm.doctype,
+                        frm.docname, "employee_name",
+                        data.message.employee_name)
+                }
+            })
+        }
+    },
+    
+
+
+
+
+	// "employee" : function(frm) {
+    //     if (frm.doc.employee) {
+    //     frappe.call({
+    //         "method": "frappe.client.get",
+    //         args: {
+    //             doctype: "Employee",
+    //             name: frm.doc.employee
+	// 		},
+	// 		callback: function (data) {
+    //             frappe.model.set_value(frm.doctype,
+    //                 frm.docname, "employee_name",
+    //                 data.message.employee_name)
+	// 		}
+	// 	})
+	// }
+    //     if (not frm.doc.employee)
+    //     {frappe.call({
+    //         method: "frappe.client.get_value",
+    //         async:false,
+    //         args:{
+    //             doctype:'Employee',
+    //             filters:{
+    //                 user_id:frappe.user.name
+    //             },
+    //             fieldname:['name']
+    //         },
+    //         callback:function (r) {
+    //             if(r.message != undefined){
+    //                 frappe.model.set_value(frm.doctype,
+    //                     frm.docname, "employee_name",
+    //                     r.message.name)
+
+    //                 };
+    //                 console.log(r.message.name)
+    //             };
+                
+    //         }
+    //     },
+
 	customer: function(frm) {
 		erpnext.utils.get_party_details(frm);
 	},
