@@ -6,6 +6,7 @@ import frappe
 import frappe.handler
 import frappe.client
 from datetime import datetime, date, timedelta
+from frappe import _
 
 def get_work_units_for_position(work_position, report_type):
     #Logic for rounding and minimum Quantity: (TBD)
@@ -72,7 +73,7 @@ def get_items_from_sr_work(work_positions, report_doc):
                                     fields={'name', 'item'}
                                     )
     if len(employee_item) != 1:
-        frappe.throw('Employee Item Assignment Mehrdeutig oder nicht gefunden.')
+        frappe.throw(_('Employee Item Assignment ambiguous or not found.'))
     
     
     item_code = employee_item[0].item
@@ -91,7 +92,9 @@ def get_items_from_sr_work(work_positions, report_doc):
             if travel_costs_item:
                 delivery_note_items.append(travel_costs_item)
             else:
-                frappe.throw("Zu der ausgewählten Adresse <a href=\"/app/address/" + work_position.address + "\">" + work_position.address +"</a> wurde noch kein Anfahrt-Item hinzugefügt")
+                frappe.throw(_("No route item has been added for the selected address <a href=\"/app/address/{0}\">{1}</a>").format(work_position.address, work_position.address))
+
+                #frappe.throw("Zu der ausgewählten Adresse <a href=\"/app/address/" + work_position.address + "\">" + work_position.address +"</a> wurde noch kein Anfahrt-Item hinzugefügt")
               
         #print(travel_costs_item)
         qty = get_amount_of_hours(work_position.begin, work_position.end)
@@ -290,49 +293,51 @@ def create_delivery_note(service_report):
             report_doc.delivery_note = DN.name
             report_doc.status = "Delivered"
             report_doc.save()
-            frappe.msgprint("Lieferschein <a href=\"/app/delivery-note/" + DN.name + "\">" + DN.name + "</a> erstellt.")
+            frappe.msgprint(_("Delivery note <a href=\"/app/delivery-note/{0}\">{1}</a> created.").format(DN.name, DN.name))
+            #frappe.msgprint("Lieferschein <a href=\"/app/delivery-note/" + DN.name + "\">" + DN.name + "</a> erstellt.")
             return True
 
         else:
-            frappe.throw('Keine abrechenbaren Positionen vorhanden.')
+            frappe.throw(_('No billable items available.'))
     else:
-        frappe.msgprint("Lieferschein <a href=\"/app/delivery-note/" + report_doc.delivery_note + "\">" + report_doc.delivery_note + "</a> bereits vorhanden.")
+        frappe.msgprint(_("Delivery note <a href=\"/app/delivery-note/{0}\">{1}</a> already exists.").format(report_doc.delivery_note, report_doc.delivery_note))
+        #frappe.msgprint("Lieferschein <a href=\"/app/delivery-note/" + report_doc.delivery_note + "\">" + report_doc.delivery_note + "</a> bereits vorhanden.")
         return False
         
 def validate_work_duration(report_doc):
     settings = frappe.get_single("Fieldservice Settings")
     for work_position in report_doc.work:
         if not work_position.begin or not work_position.end:
-            frappe.throw("One Datetime is missing.<br>Work Item No.: " + str(work_position.idx))
+            frappe.throw(_("One Datetime is missing. Work Item No.: {}").format(str(work_position.idx)))
         qty = get_amount_of_hours(work_position.begin, work_position.end)
         if qty > settings.max_work_duration:
             #print(work_position.idx)
-            frappe.throw("Work duration longer then expected.<br>Work Item No.: " + str(work_position.idx) + "<br>" + str(work_position.description))
+            frappe.throw(_("Work duration longer then expected. Work Item No.: {}").format(str(work_position.idx)))
 
 def validate_empty_work_description(report_doc):
     for work_position in report_doc.work:
         #print("validate")
         #print(work_position.description)
         if not work_position.description:
-            frappe.throw("Work description empty.<br>Work Item No.: " + str(work_position.idx))
+            frappe.throw(_("Work description empty. Work Item No.: {}").format(str(work_position.idx)))
         if len(work_position.description) < 4:
-            frappe.throw("Work description too short.<br>Work Item No.: " + str(work_position.idx))
+            frappe.throw(_("Work description too short. Work Item No.: {}").format(str(work_position.idx)))
 
 def validate_start_before_end(report_doc):
     for work_position in report_doc.work:
         if work_position.begin == work_position.end:
-            frappe.throw("Work times are equal, check begin and end.<br>Work Item No.: " + str(work_position.idx))
+            frappe.throw(_("Work times are equal. Check begin and end. Work Item No.: {}").format(str(work_position.idx)))
         if work_position.begin > work_position.end:
-            frappe.throw("Work beginn is after end, check begin and end.<br>Work Item No.: " + str(work_position.idx))
+            frappe.throw(_("Work begin is after end. Check begin and end. Work Item No.: {}").format(str(work_position.idx)))
 
 def validate_work_items(report_doc):
     if not report_doc.work:
-        frappe.throw("No work items found.")
+        frappe.throw(_("No work items found."))
 
 def validate_empty_work_item_address(report_doc):
     for work_position in report_doc.work:
         if work_position.service_type == "On-Site Service" and work_position.travel_charges == 1 and not work_position.address:
-            frappe.throw("No work item address found.<br>Work Item No.: " + str(work_position.idx))
+            frappe.throw(_("No work item address found. Work Item No.: {}").format(str(work_position.idx)))
 
 
 def get_datetime_from_timedelta(time_delta_list,date_string):

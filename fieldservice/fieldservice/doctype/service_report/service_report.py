@@ -22,6 +22,12 @@ class ServiceReport(Document):
 		validate_work_items(self)
 	
 	def before_save(self):
+		from fieldservice.api import validate_work_duration, validate_empty_work_description, validate_start_before_end, validate_work_items, validate_empty_work_item_address
+		validate_work_duration(self)
+		validate_empty_work_description(self)
+		validate_start_before_end(self)
+		validate_work_items(self)
+		#validate_empty_work_item_address(self)
 		hours_list = []
 		for workposition in self.work:
 			if workposition.begin and workposition.end:
