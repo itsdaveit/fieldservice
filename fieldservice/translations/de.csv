@@ -77,4 +77,7 @@ Work duration longer then expected. Work Item No.: {},Arbeitsdauer länger als e
 Work times are equal. Check begin and end. Work Item No.: {},Arbeitszeiten sind gleich. Beginn und Ende prüfen. Arbeitsposition-Nr.: {},
 signatures of executing employee and entitled customer person,Unterschriften von ausführendem Mitarbeiter und unterschriftsberechtigtem Kunden,
 Check if you traveled to customer adress for this work position., Prüfen Sie ob es für diese Position eine Anfahrt gab.,
-Will be fetched form the Report Type. Can be overrided for mixed reports., Wird über vom Berichtstyp geholt. Kann bei gemischten Berichten überschrieben werden.
+Will be fetched form the Report Type. Can be overrided for mixed reports., Wird über vom Berichtstyp geholt. Kann bei gemischten Berichten überschrieben werden.,
+No route item has been added for the selected address {}, Für die ausgewählte Adresse {} wurde kein Anfahrtartikel hinzugefügt,
+Delivery note {} created., Lieferschein {} erstellt.,
+Delivery note {} already exists., Lieferschein {} bereits vorhanden.

@@ -92,7 +92,10 @@ def get_items_from_sr_work(work_positions, report_doc):
             if travel_costs_item:
                 delivery_note_items.append(travel_costs_item)
             else:
-                frappe.throw(_("No route item has been added for the selected address <a href=\"/app/address/{0}\">{1}</a>").format(work_position.address, work_position.address))
+                address_link = frappe.utils.get_link_to_form("Address", work_position.address)
+                error_message = _("No route item has been added for the selected address {}").format(address_link)
+                frappe.throw(error_message)
+                #frappe.throw(_("No route item has been added for the selected address <a href=\"/app/address/{0}\">{1}</a>").format(work_position.address, work_position.address))
 
                 #frappe.throw("Zu der ausgewählten Adresse <a href=\"/app/address/" + work_position.address + "\">" + work_position.address +"</a> wurde noch kein Anfahrt-Item hinzugefügt")
               
@@ -293,14 +296,22 @@ def create_delivery_note(service_report):
             report_doc.delivery_note = DN.name
             report_doc.status = "Delivered"
             report_doc.save()
-            frappe.msgprint(_("Delivery note <a href=\"/app/delivery-note/{0}\">{1}</a> created.").format(DN.name, DN.name))
+            delivery_note_link = frappe.utils.get_link_to_form("Delivery Note", DN.name)
+            msg_text = _("Delivery note {} created.").format(delivery_note_link)
+            frappe.msgprint(msg_text)
+
+            #frappe.msgprint(_("Delivery note <a href=\"/app/delivery-note/{0}\">{1}</a> created.").format(DN.name, DN.name))
             #frappe.msgprint("Lieferschein <a href=\"/app/delivery-note/" + DN.name + "\">" + DN.name + "</a> erstellt.")
             return True
 
         else:
             frappe.throw(_('No billable items available.'))
     else:
-        frappe.msgprint(_("Delivery note <a href=\"/app/delivery-note/{0}\">{1}</a> already exists.").format(report_doc.delivery_note, report_doc.delivery_note))
+        delivery_note_link = frappe.utils.get_link_to_form("Delivery Note", report_doc.delivery_note)
+        msg_text = _("Delivery note {} already exists.").format(delivery_note_link)
+        frappe.msgprint(msg_text)
+
+        #frappe.msgprint(_("Delivery note <a href=\"/app/delivery-note/{0}\">{1}</a> already exists.").format(report_doc.delivery_note, report_doc.delivery_note))
         #frappe.msgprint("Lieferschein <a href=\"/app/delivery-note/" + report_doc.delivery_note + "\">" + report_doc.delivery_note + "</a> bereits vorhanden.")
         return False
         
