@@ -80,4 +80,5 @@ Check if you traveled to customer adress for this work position., Prüfen Sie ob
 Will be fetched form the Report Type. Can be overrided for mixed reports., Wird über vom Berichtstyp geholt. Kann bei gemischten Berichten überschrieben werden.,
 No route item has been added for the selected address {}, Für die ausgewählte Adresse {} wurde kein Anfahrtartikel hinzugefügt,
 Delivery note {} created., Lieferschein {} erstellt.,
-Delivery note {} already exists., Lieferschein {} bereits vorhanden.
+Delivery note {} already exists., Lieferschein {} bereits vorhanden.,
+Timer is not stopped. Can`t start the timmer., Der Timer ist nicht gestoppt. Er kann nicht gestartet werden., 

@@ -23,19 +23,20 @@ class ServiceReport(Document):
 	
 	def before_save(self):
 		from fieldservice.api import validate_work_duration, validate_empty_work_description, validate_start_before_end, validate_work_items, validate_empty_work_item_address
-		validate_work_duration(self)
-		validate_empty_work_description(self)
-		validate_start_before_end(self)
-		validate_work_items(self)
+		if self.work:
+			validate_work_duration(self)
+			validate_empty_work_description(self)
+			validate_start_before_end(self)
+		#validate_work_items(self)
 		#validate_empty_work_item_address(self)
-		hours_list = []
-		for workposition in self.work:
-			if workposition.begin and workposition.end:
-				hours = get_amount_of_hours(workposition.begin, workposition.end)
-				workposition.hours = hours 
-				hours_list.append(hours)
-		hours_sum = sum(hours_list)
-		self.hours_sum = hours_sum
+			hours_list = []
+			for workposition in self.work:
+				if workposition.begin and workposition.end:
+					hours = get_amount_of_hours(workposition.begin, workposition.end)
+					workposition.hours = hours 
+					hours_list.append(hours)
+			hours_sum = sum(hours_list)
+			self.hours_sum = hours_sum
 
 
 @frappe.whitelist()
@@ -46,7 +47,7 @@ def start_timer(service_report):
 		report_doc.status = "Started"
 		report_doc.save()
 	else:
-		frappe.throw("Timer is not stopped. Can`t start the timmer.")
+		frappe.throw(_("Timer is not stopped. Can`t start the timmer."))
 
 
 @frappe.whitelist()
