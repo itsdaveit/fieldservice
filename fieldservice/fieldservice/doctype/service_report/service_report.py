@@ -26,7 +26,7 @@ class ServiceReport(Document):
 		validate_work_duration(self)
 		validate_empty_work_description(self)
 		validate_start_before_end(self)
-		validate_work_items(self)
+		#validate_work_items(self)
 		#validate_empty_work_item_address(self)
 		hours_list = []
 		for workposition in self.work:
