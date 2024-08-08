@@ -9,7 +9,6 @@
   "titel",
   "timer_column_column",
   "timer",
-  "section_break_2",
   "report_data_section",
   "employee",
   "customer",
@@ -51,7 +50,8 @@
   "status",
   "aditional_info_section",
   "timer_status",
-  "timer_start"
+  "timer_start",
+  "ofork_ticket_number"
  ],
  "fields": [
   {
@@ -198,10 +198,6 @@
    "label": "Titel"
   },
   {
-   "fieldname": "section_break_2",
-   "fieldtype": "Section Break"
-  },
-  {
    "fieldname": "company",
    "fieldtype": "Link",
    "label": "Company",
@@ -324,11 +320,16 @@
    "fieldtype": "HTML",
    "label": "Unterschrift Kunde",
    "options": "<p style=\"text-align: center;\">Unterschrift Kunde</p>"
+  },
+  {
+   "fieldname": "ofork_ticket_number",
+   "fieldtype": "Data",
+   "label": "Ofork Ticket Number"
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2023-10-09 08:20:47.806539",
+ "modified": "2024-08-08 07:42:08.869248",
  "modified_by": "Administrator",
  "module": "Fieldservice",
  "name": "Service Report",
@@ -365,5 +366,6 @@
  "quick_entry": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }
