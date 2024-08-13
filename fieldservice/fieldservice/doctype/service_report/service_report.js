@@ -141,26 +141,10 @@ frappe.ui.form.on('Service Report', {
             frm.disable_save();
         };
        
-        // frappe.call({
-        //     method: "frappe.client.get_value",
-        //     args: {
-        //         doctype: "OTRSConnect Settings",
-        //         fieldname: ["zoom_link"]
-        //     },
-        //     callback(r) {
-        //         console.log
-        //         if(r.message) {
-        //             console.log(r.message)
-        //             frm.add_custom_button(__('OTRS Ticket Zoom'), function(){
-        //                 window.open(r.message["zoom_link"] + frm.doc.ofork_ticket_number,'_blank');;
-        //             }, __("Ofork Ticket"));
-        //         }
-        //     }
-        // });
         frappe.call({
             method: "frappe.client.get_value",
             args: {
-                doctype: "OTRSConnect Settings",
+                doctype: "OTRSConnect User Settings",
                 fieldname: ["zoom_link"]
             },
             callback(r) {
