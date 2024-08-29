@@ -84,20 +84,20 @@ def get_items_from_sr_work(work_positions, report_doc):
         settings = frappe.get_single("Fieldservice Settings")
         print("Work Position Details")
         print(work_position.service_type,work_position.travel_charges)
-        if work_position.service_type != "Remote Service" and work_position.travel_charges == 1:
-            if work_position.address:
-                travel_costs_item = create_travel_item(work_position.address)
-            else:
-                travel_costs_item = create_travel_item(report_doc.customer_address)
-            if travel_costs_item:
-                delivery_note_items.append(travel_costs_item)
-            else:
-                address_link = frappe.utils.get_link_to_form("Address", work_position.address)
-                error_message = _("No route item has been added for the selected address {}").format(address_link)
-                frappe.throw(error_message)
-                #frappe.throw(_("No route item has been added for the selected address <a href=\"/app/address/{0}\">{1}</a>").format(work_position.address, work_position.address))
+        # if work_position.service_type != "Remote Service" and work_position.travel_charges == 1:
+        #     if work_position.address:
+        #         travel_costs_item = create_travel_item(work_position.address)
+        #     else:
+        #         travel_costs_item = create_travel_item(report_doc.customer_address)
+        #     if travel_costs_item:
+        #         delivery_note_items.append(travel_costs_item)
+        #     else:
+        #         address_link = frappe.utils.get_link_to_form("Address", work_position.address)
+        #         error_message = _("No route item has been added for the selected address {}").format(address_link)
+        #         frappe.throw(error_message)
+        #         #frappe.throw(_("No route item has been added for the selected address <a href=\"/app/address/{0}\">{1}</a>").format(work_position.address, work_position.address))
 
-                #frappe.throw("Zu der ausgewählten Adresse <a href=\"/app/address/" + work_position.address + "\">" + work_position.address +"</a> wurde noch kein Anfahrt-Item hinzugefügt")
+        #         #frappe.throw("Zu der ausgewählten Adresse <a href=\"/app/address/" + work_position.address + "\">" + work_position.address +"</a> wurde noch kein Anfahrt-Item hinzugefügt")
               
         #print(travel_costs_item)
         qty = get_amount_of_hours(work_position.begin, work_position.end)

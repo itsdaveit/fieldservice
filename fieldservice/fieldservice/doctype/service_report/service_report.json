@@ -12,6 +12,7 @@
   "section_break_2",
   "report_data_section",
   "employee",
+  "project",
   "customer",
   "contact_person",
   "customer_address",
@@ -32,7 +33,11 @@
   "work",
   "hours_sum",
   "items_delivered_section",
+  "distance",
   "scan_barcode",
+  "column_break_8igbb",
+  "add_kilometers",
+  "section_break_zxblv",
   "items",
   "remarks_section",
   "remarks",
@@ -311,11 +316,42 @@
    "fieldtype": "HTML",
    "label": "Unterschrift Kunde",
    "options": "<p style=\"text-align: center;\">Unterschrift Kunde</p>"
+  },
+  {
+   "allow_in_quick_entry": 1,
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Projekt",
+   "options": "Project"
+  },
+  {
+   "fieldname": "distance",
+   "fieldtype": "Int",
+   "label": "Anfahrt gefahrene Kilometer"
+  },
+  {
+   "fieldname": "column_break_8igbb",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "add_kilometers",
+   "fieldtype": "Button",
+   "label": "Anfahrt hinzuf\u00fcgen"
+  },
+  {
+   "fieldname": "section_break_zxblv",
+   "fieldtype": "Section Break"
   }
  ],
  "is_submittable": 1,
- "links": [],
- "modified": "2024-01-24 13:27:05.272366",
+ "links": [
+  {
+   "group": "Direkte Verkn\u00fcpfungen",
+   "link_doctype": "Materialbedarf",
+   "link_fieldname": "service_report"
+  }
+ ],
+ "modified": "2024-07-23 07:42:53.365014",
  "modified_by": "Administrator",
  "module": "Fieldservice",
  "name": "Service Report",

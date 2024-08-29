@@ -59,6 +59,38 @@ frappe.ui.form.on('Service Report', {
     },
 	refresh: function(frm) {
 
+        frm.add_custom_button(__('Materialbedarf erstellen'), function() {
+            if (frm.doc.customer) {
+                console.log('Kunde vorhanden, prüfe auf bestehenden Materialbedarf...');
+                
+                frappe.db.get_value('Materialbedarf', {service_report: frm.doc.name}, 'name')
+                    .then(r => {
+                        console.log('Abfrageergebnis:', r);
+                        
+                        if (r.message && r.message.name) {
+                            let materialbedarf_name = r.message.name;
+                            let materialbedarf_link = frappe.utils.get_form_link('Materialbedarf', materialbedarf_name);
+                            let msg_text = `Der Materialbedarf <a href="${materialbedarf_link}">${materialbedarf_name}</a> existiert bereits.`;
+                            frappe.msgprint({message: msg_text, title: __('Hinweis'), indicator: 'orange'});
+                        } else {
+                            console.log('Kein bestehender Materialbedarf gefunden, erstelle neuen...');
+                            
+                            frappe.new_doc('Materialbedarf', {
+                                kunde: frm.doc.customer,
+                                service_report: frm.doc.name,
+                                project: frm.doc.project
+                            });
+                        }
+                    }).catch(err => {
+                        console.error('Fehler bei der Abfrage:', err);
+                    });
+            } else {
+                console.log('Kein Kunde ausgewählt.');
+                frappe.msgprint(__('Bitte wählen Sie zuerst einen Kunden aus.'));
+            }
+        });
+        
+        
         if (sr_report_Interval != frm.doc.current_sr_report_Interval) {
             clearInterval(sr_report_Interval);
         }
@@ -142,6 +174,56 @@ frappe.ui.form.on('Service Report', {
         };
         
     },
+    
+    // add_kilometers: function(frm) {
+    //     frm.save_or_update({
+    //         callback: function() {
+    //             frappe.call({
+    //                 method: "fieldservice.fieldservice.doctype.service_report.service_report.add_travel",
+    //                 args: {
+    //                     docname: frm.doc.name
+    //                 },
+    //                 callback: function(response) {
+    //                     frappe.msgprint(__('Anfahrt hinzugefügt'));
+    //                     frm.reload_doc();
+    //                 }
+    //             });
+    //         }
+    //     });
+    // },
+    
+    // add_kilometers: function(frm) {
+    //     console.log(frm.doc.distance)
+
+    //         frappe.call({
+    //             method: "fieldservice.fieldservice.doctype.service_report.service_report.add_travel",
+    //             args: {
+    //                 docname: frm.doc.name
+    //             },
+    //             callback: function(response) {
+    //                 frappe.msgprint(__('Anfahrt hinzugefügt'));
+    //                 frm.reload_doc();
+    //             }
+    //         });
+    // },
+    add_kilometers: function(frm) {
+        console.log(frm.doc.distance);
+    
+        frappe.call({
+            method: "fieldservice.fieldservice.doctype.service_report.service_report.add_travel",
+            args: {
+                docname: frm.doc.name,
+                distance: frm.doc.distance  // Übergebe die Distance hier
+            },
+            callback: function(response) {
+                frappe.msgprint(__('Anfahrt hinzugefügt'));
+                frm.reload_doc();
+            }
+        });
+    },
+    
+    
+
 
     "employee": function(frm) {
         
@@ -186,47 +268,6 @@ frappe.ui.form.on('Service Report', {
     
 
 
-
-
-	// "employee" : function(frm) {
-    //     if (frm.doc.employee) {
-    //     frappe.call({
-    //         "method": "frappe.client.get",
-    //         args: {
-    //             doctype: "Employee",
-    //             name: frm.doc.employee
-	// 		},
-	// 		callback: function (data) {
-    //             frappe.model.set_value(frm.doctype,
-    //                 frm.docname, "employee_name",
-    //                 data.message.employee_name)
-	// 		}
-	// 	})
-	// }
-    //     if (not frm.doc.employee)
-    //     {frappe.call({
-    //         method: "frappe.client.get_value",
-    //         async:false,
-    //         args:{
-    //             doctype:'Employee',
-    //             filters:{
-    //                 user_id:frappe.user.name
-    //             },
-    //             fieldname:['name']
-    //         },
-    //         callback:function (r) {
-    //             if(r.message != undefined){
-    //                 frappe.model.set_value(frm.doctype,
-    //                     frm.docname, "employee_name",
-    //                     r.message.name)
-
-    //                 };
-    //                 console.log(r.message.name)
-    //             };
-                
-    //         }
-    //     },
-
 	customer: function(frm) {
 		erpnext.utils.get_party_details(frm);
 	},
@@ -236,6 +277,75 @@ frappe.ui.form.on('Service Report', {
 	contact_person: function(frm) {
 		erpnext.utils.get_contact_details(frm);
 	},
+
+    project: function(frm) {
+        if (frm.doc.project) {
+            console.log("Ausgewähltes Projekt:", frm.doc.project); // Debug-Ausgabe
+            frappe.db.get_single_value('Fieldservice Settings', 'standard_project')
+                .then(standard_project => {
+                    if (frm.doc.project !== standard_project) {
+                        frappe.db.get_value('Project', frm.doc.project, 'customer', (r) => {
+                            console.log("Projektdetails:", r); // Debug-Ausgabe
+                            if (r && r.customer) {
+                                console.log("Kunde wird gesetzt auf:", r.customer); // Debug-Ausgabe
+                                frm.set_value('customer', r.customer).then(() => {
+                                    frm.trigger('customer');
+                                });
+                            }
+                        });
+                    } else {
+                        if (!frm.is_standard_project_notified) {
+                            console.log("Das ausgewählte Projekt ist das Standardprojekt. Kein Kunde wird gesetzt.");
+                            frappe.msgprint(__("Das ausgewählte Projekt ist das Standardprojekt. Kein Kunde wurde gesetzt."));
+                            frm.is_standard_project_notified = true;
+                        }
+                    }
+                });
+        } else {
+            frm.is_standard_project_notified = false;
+        }
+    }
+    
+    // project: function(frm) {
+    //     if (frm.doc.project) {
+    //         console.log("Ausgewähltes Projekt:", frm.doc.project); // Debug-Ausgabe
+    //         // Standardprojekt aus den Fieldservice Settings abrufen
+    //         frappe.db.get_single_value('Fieldservice Settings', 'standard_project')
+    //             .then(standard_project => {
+    //                 if (frm.doc.project !== standard_project) {
+    //                     // Fortfahren, wenn das ausgewählte Projekt nicht das Standardprojekt ist
+    //                     frappe.db.get_value('Project', frm.doc.project, 'customer', (r) => {
+    //                         console.log("Projektdetails:", r); // Debug-Ausgabe
+    //                         if (r && r.customer) {
+    //                             console.log("Kunde wird gesetzt auf:", r.customer); // Debug-Ausgabe
+    //                             frm.set_value('customer', r.customer).then(() => {
+    //                                 frm.trigger('customer'); // Kundenfunktion auslösen, nachdem das Kundenfeld gesetzt wurde
+    //                             });
+    //                         }
+    //                     });
+    //                 } else {
+    //                     console.log("Das ausgewählte Projekt ist das Standardprojekt. Kein Kunde wird gesetzt.");
+    //                     frappe.msgprint(__("Das ausgewählte Projekt ist das Standardprojekt. Kein Kunde wird gesetzt."));
+    //                 }
+    //             });
+    //     }
+    // }
+    
+    // project: function(frm) {
+    //     if (frm.doc.project) { // Make sure the field name is correct
+    //         console.log("Selected project:", frm.doc.project); // Debugging output
+    //         frappe.db.get_value('Project', frm.doc.project, 'customer', (r) => {
+    //             console.log("Project details:", r); // Debugging output
+    //             if (r && r.customer) {
+    //                 console.log("Setting customer to:", r.customer); // Debugging output
+    //                 frm.set_value('customer', r.customer).then(() => {
+    //                     frm.trigger('customer'); // Trigger the customer function to execute after setting the customer field
+    //                 });
+    //             }
+    //         });
+    //     }
+    // }
+    
 });
 
 

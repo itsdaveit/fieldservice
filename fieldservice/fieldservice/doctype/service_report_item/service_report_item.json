@@ -8,7 +8,8 @@
  "field_order": [
   "qty",
   "item_code",
-  "item_name"
+  "item_name",
+  "rate"
  ],
  "fields": [
   {
@@ -37,18 +38,25 @@
    "label": "Quantity",
    "print_width": "40",
    "reqd": 1
+  },
+  {
+   "fieldname": "rate",
+   "fieldtype": "Currency",
+   "label": "Preis"
   }
  ],
  "istable": 1,
  "links": [],
- "modified": "2021-12-29 03:10:38.194625",
+ "modified": "2024-07-23 07:50:37.914519",
  "modified_by": "Administrator",
  "module": "Fieldservice",
  "name": "Service Report Item",
+ "naming_rule": "Random",
  "owner": "Administrator",
  "permissions": [],
  "quick_entry": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }

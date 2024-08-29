@@ -6,7 +6,9 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "max_work_duration"
+  "max_work_duration",
+  "standard_project",
+  "travel_item"
  ],
  "fields": [
   {
@@ -15,12 +17,24 @@
    "fieldname": "max_work_duration",
    "fieldtype": "Int",
    "label": "Max Work Duration"
+  },
+  {
+   "fieldname": "standard_project",
+   "fieldtype": "Link",
+   "label": "Pauschalprojekt f\u00fcr den Kundendienst",
+   "options": "Project"
+  },
+  {
+   "fieldname": "travel_item",
+   "fieldtype": "Link",
+   "label": "Anfahrt",
+   "options": "Item"
   }
  ],
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-04-03 21:53:40.399703",
+ "modified": "2024-07-23 06:59:48.577038",
  "modified_by": "Administrator",
  "module": "Fieldservice",
  "name": "Fieldservice Settings",
@@ -38,5 +52,6 @@
   }
  ],
  "sort_field": "modified",
- "sort_order": "DESC"
+ "sort_order": "DESC",
+ "states": []
 }
