@@ -479,45 +479,49 @@ def get_datetime_from_timedelta(time_delta_list,date_string):
 #     #print(surcharge_dict_list)  
 #     return surcharge_dict_list    
 
+
 @frappe.whitelist()
 def insert_surchargs_in_delivery_note(service_report):
     a = create_delivery_note(service_report)
     if a:
         service_report_doc = frappe.get_doc("Service Report", service_report)
         employee = service_report_doc.employee
-        delivery_note = frappe.get_doc("Delivery Note",service_report_doc.delivery_note)
+        delivery_note = frappe.get_doc("Delivery Note", service_report_doc.delivery_note)
         customer_doc = frappe.get_doc("Customer", delivery_note.customer)
         surcharges_fur_current_surcharge_Determination = get_surcharges_fur_current_surcharge_Determination(customer_doc)
         delivery_note_items = delivery_note.items
         delivery_note_items_copy = delivery_note_items.copy()
         delivery_note.ignore_pricing_rule = 1
+        
         count = 0
-        for item in delivery_note_items_copy:
+        index = 0
+        while index < len(delivery_note_items_copy):
+            item = delivery_note_items_copy[index]
             count += 1
-            print(count)
             item.idx = count
             price = item.rate
+            
             if item.agains_service_report and item.ignore_surcharges == 0:
-                
                 surcharges_timeline = get_surcharges_timeline(surcharges_fur_current_surcharge_Determination, item)[0]
                 sorted_work_time_line = add_work_data_to_timeline(surcharges_timeline, item)
-                start_surcharge = get_start_surcharge(surcharges_timeline,item)
+                start_surcharge = get_start_surcharge(surcharges_timeline, item)
                 relevant_surcharge_dict = get_surcharges_timeline(surcharges_fur_current_surcharge_Determination, item)[1]
-                surcharge_dict = create_surcharge_dict_for_work(relevant_surcharge_dict,sorted_work_time_line,start_surcharge, delivery_note)
-                surcharge_item = get_item_from_surcharge_in_percent(surcharge_dict,employee)
+                surcharge_dict = create_surcharge_dict_for_work(relevant_surcharge_dict, sorted_work_time_line, start_surcharge, delivery_note)
+                surcharge_item = get_item_from_surcharge_in_percent(surcharge_dict, employee)
 
-                if len(surcharge_item)>0:
-                    
+                if len(surcharge_item) > 0:
                     for el in surcharge_item:
                         count += 1
-                        el.rate = el.rate*price
+                        el.rate = el.rate * price
                         el.idx = count
-                        delivery_note.append("items",el)
-                        delivery_note.save()
-                        print(delivery_note_items, delivery_note_items_copy)
-                    
-            else:
-                delivery_note.save()
+                        delivery_note.append("items", el)
+                        print(f"Added surcharge item {el} after item index {index}")
+            
+            index += 1
+        
+        delivery_note.save()
+
+
 
 
 def get_surcharges_fur_current_surcharge_Determination(customer_doc):
@@ -620,4 +624,4 @@ def create_surcharge_dict_for_work(relevant_surcharge_dict,sorted_work_time_line
     return surcharge_dict_list
 
     
-#     #Hier müssten wir nun innerhalb der Liste alle relevanten Phasen haben, die sich aus Wochentags-Regel ergeben    
+  
