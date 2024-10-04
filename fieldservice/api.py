@@ -514,6 +514,7 @@ def insert_surchargs_in_delivery_note(service_report):
                         count += 1
                         el.rate = el.rate * price
                         el.idx = count
+                        el.custom_created_from_service_report_item = item.name
                         delivery_note.append("items", el)
                         print(f"Added surcharge item {el} after item index {index}")
             
