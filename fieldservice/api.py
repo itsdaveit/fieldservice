@@ -110,8 +110,8 @@ def get_items_from_sr_work(work_positions, report_doc):
                                                 "service_report_item_hours":qty
                                                 })
        
-        
-        delivery_note_item.description = get_work_item_description(item_code, work_position.description, work_position.begin, work_position.end)
+        description = "Titel: "+report_doc.titel+"<br>"+ work_position.description
+        delivery_note_item.description = get_work_item_description(item_code, description, work_position.begin, work_position.end)
         # if work_position.ignore_surcharges == 1:
         #     delivery_note_item.description = delivery_note_item.description + "<br>"+settings.ignore_surcharges_text
         # #print("###delivery_note_item####")
