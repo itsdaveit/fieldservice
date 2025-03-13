@@ -8,6 +8,7 @@ import frappe
 from frappe.model.document import Document
 from frappe import _
 from fieldservice.api import get_amount_of_hours
+from fieldservice.validation import validate_service_report
 
 class ServiceReport(Document):
 	def on_submit(self):
@@ -15,19 +16,21 @@ class ServiceReport(Document):
 		self.save()
 	
 	def before_submit(self):
-		from fieldservice.api import validate_work_duration, validate_empty_work_description, validate_start_before_end, validate_work_items
-		validate_work_duration(self)
-		validate_empty_work_description(self)
-		validate_start_before_end(self)
-		validate_work_items(self)
+		# Use the new validation function with throw_errors=True
+		validate_service_report(self, throw_errors=True)
 	
 	def before_save(self):
-		from fieldservice.api import validate_work_duration, validate_empty_work_description, validate_start_before_end, validate_work_items, validate_empty_work_item_address
-		validate_work_duration(self)
-		validate_empty_work_description(self)
-		validate_start_before_end(self)
-		#validate_work_items(self)
-		#validate_empty_work_item_address(self)
+		# Use the new validation function with throw_errors=False
+		errors = validate_service_report(self, throw_errors=False)
+		
+		# Display warnings if any
+		if errors:
+			warning_message = _("Warning: The following issues were found:") + "<br>"
+			warning_message += "<br>".join(errors)
+			warning_message += "<br><br>" + _("You can save the document, but these issues must be fixed before submission.")
+			frappe.msgprint(warning_message, indicator="orange", alert=True)
+		
+		# Calculate hours
 		hours_list = []
 		for workposition in self.work:
 			if workposition.begin and workposition.end:
@@ -84,6 +87,4 @@ def toggle_timer(service_report):
 		return "Timer stopped"
 	if report_doc.status == "Draft":
 		start_timer(service_report)
-		return "Timer started"
-
-
+		return "Timer started" 
