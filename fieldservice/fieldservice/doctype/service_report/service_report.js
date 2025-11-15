@@ -156,6 +156,46 @@ frappe.ui.form.on('Service Report', {
                 }
             }
         });
+
+        // Button to set selected rows to "Without Surcharge"
+        frm.add_custom_button(__('selektierte ohne Zuschlag'), function() {
+            let selected_rows = frm.fields_dict.work.grid.get_selected_children();
+
+            if (selected_rows.length === 0) {
+                frappe.msgprint(__('Bitte wählen Sie mindestens eine Zeile aus.'));
+                return;
+            }
+
+            selected_rows.forEach(function(row) {
+                frappe.model.set_value(row.doctype, row.name, 'ignore_surcharges', 1);
+            });
+
+            frm.refresh_field('work');
+            frappe.show_alert({
+                message: __('Zuschlag für {0} Zeile(n) deaktiviert', [selected_rows.length]),
+                indicator: 'green'
+            });
+        }, __("Funktionen"));
+
+        // Button to set selected rows to "With Surcharge"
+        frm.add_custom_button(__('selektierte mit Zuschlag'), function() {
+            let selected_rows = frm.fields_dict.work.grid.get_selected_children();
+
+            if (selected_rows.length === 0) {
+                frappe.msgprint(__('Bitte wählen Sie mindestens eine Zeile aus.'));
+                return;
+            }
+
+            selected_rows.forEach(function(row) {
+                frappe.model.set_value(row.doctype, row.name, 'ignore_surcharges', 0);
+            });
+
+            frm.refresh_field('work');
+            frappe.show_alert({
+                message: __('Zuschlag für {0} Zeile(n) aktiviert', [selected_rows.length]),
+                indicator: 'green'
+            });
+        }, __("Funktionen"));
         
         
         
