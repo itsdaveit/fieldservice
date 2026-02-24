@@ -7,6 +7,7 @@ from datetime import datetime
 import frappe
 from frappe.model.document import Document
 from frappe import _
+from frappe.contacts.doctype.address.address import get_address_display
 from fieldservice.api import get_amount_of_hours
 from fieldservice.validation import validate_service_report
 
@@ -32,6 +33,12 @@ class ServiceReport(Document):
 				warning_message += "<br><br>" + _("You can save the document, but these issues must be fixed before submission.")
 				frappe.msgprint(warning_message, indicator="orange", alert=True)
 		
+		# Populate address display if address is set
+		if self.customer_address:
+			self.address_display = get_address_display(self.customer_address)
+		elif not self.customer_address:
+			self.address_display = ""
+
 		# Calculate hours
 		hours_list = []
 		for workposition in self.work:
