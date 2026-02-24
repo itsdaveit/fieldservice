@@ -33,6 +33,32 @@ function format_timer(duration) {
 }
 
 
+function set_link_filters(frm) {
+    // Contact filter
+    if (frm.doc.filter_contact_by_customer && frm.doc.customer) {
+        frm.set_query("contact_person", function() {
+            return {
+                query: "frappe.contacts.doctype.contact.contact.contact_query",
+                filters: { link_doctype: "Customer", link_name: frm.doc.customer }
+            };
+        });
+    } else {
+        frm.set_query("contact_person", function() { return {}; });
+    }
+
+    // Address filter
+    if (frm.doc.filter_address_by_customer && frm.doc.customer) {
+        frm.set_query("customer_address", function() {
+            return {
+                query: "frappe.contacts.doctype.address.address.address_query",
+                filters: { link_doctype: "Customer", link_name: frm.doc.customer }
+            };
+        });
+    } else {
+        frm.set_query("customer_address", function() { return {}; });
+    }
+}
+
 frappe.ui.form.on('Service Report', {
 
 
@@ -58,6 +84,7 @@ frappe.ui.form.on('Service Report', {
         
     },
 	refresh: function(frm) {
+        set_link_filters(frm);
 
         if (sr_report_Interval != frm.doc.current_sr_report_Interval) {
             clearInterval(sr_report_Interval);
@@ -292,6 +319,13 @@ frappe.ui.form.on('Service Report', {
 
 	customer: function(frm) {
 		erpnext.utils.get_party_details(frm);
+		set_link_filters(frm);
+	},
+	filter_contact_by_customer: function(frm) {
+		set_link_filters(frm);
+	},
+	filter_address_by_customer: function(frm) {
+		set_link_filters(frm);
 	},
 	customer_address: function(frm) {
 		erpnext.utils.get_address_display(frm);

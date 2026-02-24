@@ -13,7 +13,9 @@
   "employee",
   "customer",
   "contact_person",
+  "filter_contact_by_customer",
   "customer_address",
+  "filter_address_by_customer",
   "section_break_3",
   "employee_name",
   "customer_name",
@@ -175,6 +177,12 @@
    "options": "Address"
   },
   {
+   "default": "1",
+   "fieldname": "filter_address_by_customer",
+   "fieldtype": "Check",
+   "label": "Filter Address by Customer"
+  },
+  {
    "fieldname": "address_display",
    "fieldtype": "Read Only",
    "label": "Address Name"
@@ -184,6 +192,12 @@
    "fieldtype": "Link",
    "label": "Contact",
    "options": "Contact"
+  },
+  {
+   "default": "1",
+   "fieldname": "filter_contact_by_customer",
+   "fieldtype": "Check",
+   "label": "Filter Contact by Customer"
   },
   {
    "fieldname": "contact_email",
