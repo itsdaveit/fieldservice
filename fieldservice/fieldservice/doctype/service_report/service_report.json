@@ -9,13 +9,14 @@
   "titel",
   "timer_column_column",
   "timer",
-  "section_break_2",
   "report_data_section",
   "employee",
   "project",
   "customer",
   "contact_person",
+  "filter_contact_by_customer",
   "customer_address",
+  "filter_address_by_customer",
   "section_break_3",
   "employee_name",
   "customer_name",
@@ -54,7 +55,8 @@
   "status",
   "aditional_info_section",
   "timer_status",
-  "timer_start"
+  "timer_start",
+  "ofork_ticket_number"
  ],
  "fields": [
   {
@@ -82,12 +84,14 @@
    "fieldtype": "Column Break"
   },
   {
+   "fetch_from": "employee.employee_name",
    "fieldname": "employee_name",
    "fieldtype": "Read Only",
    "in_list_view": 1,
    "label": "Employee Name"
   },
   {
+   "fetch_from": "customer.customer_name",
    "fieldname": "customer_name",
    "fieldtype": "Read Only",
    "in_list_view": 1,
@@ -178,6 +182,12 @@
    "options": "Address"
   },
   {
+   "default": "1",
+   "fieldname": "filter_address_by_customer",
+   "fieldtype": "Check",
+   "label": "Filter Address by Customer"
+  },
+  {
    "fieldname": "address_display",
    "fieldtype": "Read Only",
    "label": "Address Name"
@@ -189,6 +199,13 @@
    "options": "Contact"
   },
   {
+   "default": "1",
+   "fieldname": "filter_contact_by_customer",
+   "fieldtype": "Check",
+   "label": "Filter Contact by Customer"
+  },
+  {
+   "fetch_from": "contact_person.email_id",
    "fieldname": "contact_email",
    "fieldtype": "Read Only",
    "label": "Contact E-Mail"
@@ -199,10 +216,6 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Titel"
-  },
-  {
-   "fieldname": "section_break_2",
-   "fieldtype": "Section Break"
   },
   {
    "fieldname": "company",
@@ -221,8 +234,7 @@
    "fieldname": "delivery_note",
    "fieldtype": "Link",
    "label": "Delivery Note",
-   "options": "Delivery Note",
-   "read_only": 1
+   "options": "Delivery Note"
   },
   {
    "allow_on_submit": 1,
@@ -343,6 +355,7 @@
    "fieldtype": "Section Break"
   }
  ],
+ "grid_page_length": 50,
  "is_submittable": 1,
  "links": [
   {
@@ -351,7 +364,7 @@
    "link_fieldname": "service_report"
   }
  ],
- "modified": "2024-07-23 07:42:53.365014",
+ "modified": "2026-02-24 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Fieldservice",
  "name": "Service Report",
@@ -387,6 +400,8 @@
   }
  ],
  "quick_entry": 1,
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
  "sort_field": "modified",
  "sort_order": "DESC",
  "states": [],

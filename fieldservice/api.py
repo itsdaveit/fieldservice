@@ -113,8 +113,8 @@ def get_items_from_sr_work(work_positions, report_doc):
                                                 "service_report_item_hours":qty
                                                 })
        
-        
-        delivery_note_item.description = get_work_item_description(item_code, work_position.description, work_position.begin, work_position.end)
+        description = "Titel: "+report_doc.titel+"<br>"+ work_position.description
+        delivery_note_item.description = get_work_item_description(item_code, description, work_position.begin, work_position.end)
         # if work_position.ignore_surcharges == 1:
         #     delivery_note_item.description = delivery_note_item.description + "<br>"+settings.ignore_surcharges_text
         # #print("###delivery_note_item####")
@@ -315,42 +315,6 @@ def create_delivery_note(service_report):
         #frappe.msgprint("Lieferschein <a href=\"/app/delivery-note/" + report_doc.delivery_note + "\">" + report_doc.delivery_note + "</a> bereits vorhanden.")
         return False
         
-def validate_work_duration(report_doc):
-    settings = frappe.get_single("Fieldservice Settings")
-    for work_position in report_doc.work:
-        if not work_position.begin or not work_position.end:
-            frappe.throw(_("One Datetime is missing. Work Item No.: {}").format(str(work_position.idx)))
-        qty = get_amount_of_hours(work_position.begin, work_position.end)
-        if qty > settings.max_work_duration:
-            #print(work_position.idx)
-            frappe.throw(_("Work duration longer then expected. Work Item No.: {}").format(str(work_position.idx)))
-
-def validate_empty_work_description(report_doc):
-    for work_position in report_doc.work:
-        #print("validate")
-        #print(work_position.description)
-        if not work_position.description:
-            frappe.throw(_("Work description empty. Work Item No.: {}").format(str(work_position.idx)))
-        if len(work_position.description) < 4:
-            frappe.throw(_("Work description too short. Work Item No.: {}").format(str(work_position.idx)))
-
-def validate_start_before_end(report_doc):
-    for work_position in report_doc.work:
-        if work_position.begin == work_position.end:
-            frappe.throw(_("Work times are equal. Check begin and end. Work Item No.: {}").format(str(work_position.idx)))
-        if work_position.begin > work_position.end:
-            frappe.throw(_("Work begin is after end. Check begin and end. Work Item No.: {}").format(str(work_position.idx)))
-
-def validate_work_items(report_doc):
-    if not report_doc.work:
-        frappe.throw(_("No work items found."))
-
-def validate_empty_work_item_address(report_doc):
-    for work_position in report_doc.work:
-        if work_position.service_type == "On-Site Service" and work_position.travel_charges == 1 and not work_position.address:
-            frappe.throw(_("No work item address found. Work Item No.: {}").format(str(work_position.idx)))
-
-
 def get_datetime_from_timedelta(time_delta_list,date_string):
     s_l_date =[]
     for x in time_delta_list:
@@ -362,173 +326,49 @@ def get_datetime_from_timedelta(time_delta_list,date_string):
         #print(s_l_date)
     return s_l_date
 
-# def get_work_end(sorted_time_list,prev_el_s_l,s_l_date,work_item_price,report_doc):
-   
-#     surcharge_dict_list = []
-#     for el in sorted_time_list: 
-#         if el == min(sorted_time_list):
-#             prev_el_s_l = prev_el_s_l
-#         else:
-#             prev_el_s_l = el
-#         index_prev_el = next((i for i, x in enumerate(s_l_date) if x["from_time"] == prev_el_s_l), None)
-#         n_el = sorted_time_list[sorted_time_list.index(el)+1]
-#         # print('element')
-#         # print(el)
-#         # print('prev_el_s_l:') 
-#         # print(prev_el_s_l)
-#         # print("n_el")
-#         # print(n_el)
-#         surcharge_dict = s_l_date[index_prev_el]
-#         qty = get_amount_of_hours(el, n_el, report_doc)
-#         surcharge_dict["qty"] = qty
-#         surcharge_dict["begin"] = el
-#         surcharge_dict["end"] = n_el
-#         surcharge_dict["work_item_price"]= work_item_price
-#         surcharge_dict_list.append(surcharge_dict)
-#         if n_el == max(sorted_time_list):
-#             break
-#     print('####****####')
-#     print(surcharge_dict_list)
-    
-#     return surcharge_dict_list
-# def get_surcharge(report_doc):
-#     employee_item = frappe.get_all('Employee Item Assignment', 
-#                                     filters={'employee': report_doc.employee,
-#                                             'service_type': report_doc.report_type},
-#                                     fields={'name', 'item'}
-#                                     )
-#     item_code = employee_item[0].item
-#     item_price_li = frappe.get_all("Item Price", 
-#                                     filters = {"item_code": item_code},
-#                                     fields = "price_list_rate"
-#                                     )
-#     work_price = item_price_li[0].price_list_rate
-    
-#     customer = report_doc.customer
-#     rules = frappe.get_all("Pricing Rule", 
-#                             filters = {"customer":customer,
-#                                         "item_group" :["in",["Dienstleistungen", "Arbeitszeiten Techniker"]] },
-#                              fields = "rate"
-#                              )
-#     if len(rules) > 0:
-#         work_item_price = rules[0]["rate"]
-#     else:
-#         work_item_price = work_price
-
-#     cust_surch = frappe.get_all("Service Report Surcharge", filters={"customer":customer})
-#     print(customer)
-#     # if len(cust_surch) == 0:
-#     surcharge_dict_list = []
-#     for work_position in report_doc.work:
-        
-#         date_begin = work_position.begin.date()
-#         date_string = date_begin.strftime('%d.%m.%Y')
-#         date_end = work_position.end.date()
-#         date_end_string = date_end.strftime('%d.%m.%Y')
-#         weekday_begin = work_position.begin.strftime('%A')
-#         prev_day = date_begin - timedelta(days=1)
-#         work_begin = work_position.begin
-#         work_end = work_position.end
-        
-#         fields = ["from_time", "surcharge_in_percent", "surcharge_per_hour","surcharge_per_assignment"]
-#         holiday_list = [x.date for x in frappe.get_all("Public holiday",fields = "date")]
-#         #print(holiday_list)
-#         sur_day_list = [prev_day,date_begin]
-#         if date_begin != date_end:
-#             sur_day_list.append(date_end)
-#         #print('####sur_day_list#####')
-#         #print(sur_day_list)
-#         s_l_date = []
-#         if len(cust_surch) == 0:
-#             for el in sur_day_list:
-#                 if el in holiday_list:
-#                     surcharge_list = frappe.get_all("Service Report Surcharge", filters= {"weekday": "Public holiday"}, fields = fields)
-#                 else:
-#                     surcharge_list = frappe.get_all("Service Report Surcharge", filters= {"weekday": el.strftime('%A') }, fields = fields )
-#                 s_l_date_day = get_datetime_from_timedelta(surcharge_list,el.strftime('%d.%m.%Y') )
-#                 s_l_date += s_l_date_day
-#         else:
-#             for el in sur_day_list:
-#                 if el in holiday_list:
-#                     surcharge_cust_list = frappe.get_all("Service Report Surcharge", filters= {"weekday": "Public holiday", "customer":customer}, fields = fields)
-#                     if len(surcharge_cust_list) > 0:
-#                         surcharge_list = surcharge_cust_list
-#                     else:    
-#                         surcharge_list = frappe.get_all("Service Report Surcharge", filters= {"weekday": "Public holiday"}, fields = fields)
-#                 else:
-#                     surcharge_cust_list = frappe.get_all("Service Report Surcharge", filters= {"weekday": el.strftime('%A'), "customer":customer}, fields = fields)
-#                     if len(surcharge_cust_list) > 0:
-#                         surcharge_list = surcharge_cust_list
-#                     else:
-#                         surcharge_list = frappe.get_all("Service Report Surcharge", filters= {"weekday": el.strftime('%A') }, fields = fields )
-#                     s_l_date_day = get_datetime_from_timedelta(surcharge_list,el.strftime('%d.%m.%Y') )
-#                     s_l_date += s_l_date_day
-         
-
-#         #s_l_date = s_l_date_begin + s_l_date_end
-#         sur_li =[x.from_time for x in s_l_date]
-#         sorted_sur_li =sorted(sur_li)
-#         time_list = [work_begin,work_end]
-#         for element in s_l_date:
-#             if element.from_time > work_begin and element.from_time < work_end: 
-#                 time_list.append(element.from_time)       
-#         sorted_time_list = sorted(time_list)
-#         res = [x for x in sorted_sur_li if x < work_begin ]
-#         if work_begin in sur_li:
-#             prev_el_s_l = work_begin
-#         else:
-#             prev_el_s_l = max(res)
-           
-        
-#         #print(sorted_time_list)
-#         surcharge_dict = get_work_end(sorted_time_list,prev_el_s_l,s_l_date,work_item_price,report_doc)
-#         surcharge_dict_list += surcharge_dict
-                
-#         #print('#######list#####') 
-#         #print('#######neue Liste#####') 
-        
-#     #print(surcharge_dict_list)  
-#     return surcharge_dict_list    
-
 @frappe.whitelist()
 def insert_surchargs_in_delivery_note(service_report):
     a = create_delivery_note(service_report)
     if a:
         service_report_doc = frappe.get_doc("Service Report", service_report)
         employee = service_report_doc.employee
-        delivery_note = frappe.get_doc("Delivery Note",service_report_doc.delivery_note)
+        delivery_note = frappe.get_doc("Delivery Note", service_report_doc.delivery_note)
         customer_doc = frappe.get_doc("Customer", delivery_note.customer)
         surcharges_fur_current_surcharge_Determination = get_surcharges_fur_current_surcharge_Determination(customer_doc)
         delivery_note_items = delivery_note.items
         delivery_note_items_copy = delivery_note_items.copy()
         delivery_note.ignore_pricing_rule = 1
+        
         count = 0
-        for item in delivery_note_items_copy:
+        index = 0
+        while index < len(delivery_note_items_copy):
+            item = delivery_note_items_copy[index]
             count += 1
-            print(count)
             item.idx = count
             price = item.rate
+            
             if item.agains_service_report and item.ignore_surcharges == 0:
-                
                 surcharges_timeline = get_surcharges_timeline(surcharges_fur_current_surcharge_Determination, item)[0]
                 sorted_work_time_line = add_work_data_to_timeline(surcharges_timeline, item)
-                start_surcharge = get_start_surcharge(surcharges_timeline,item)
+                start_surcharge = get_start_surcharge(surcharges_timeline, item)
                 relevant_surcharge_dict = get_surcharges_timeline(surcharges_fur_current_surcharge_Determination, item)[1]
-                surcharge_dict = create_surcharge_dict_for_work(relevant_surcharge_dict,sorted_work_time_line,start_surcharge, delivery_note)
-                surcharge_item = get_item_from_surcharge_in_percent(surcharge_dict,employee)
+                surcharge_dict = create_surcharge_dict_for_work(relevant_surcharge_dict, sorted_work_time_line, start_surcharge, delivery_note)
+                surcharge_item = get_item_from_surcharge_in_percent(surcharge_dict, employee)
 
-                if len(surcharge_item)>0:
-                    
+                if len(surcharge_item) > 0:
                     for el in surcharge_item:
                         count += 1
-                        el.rate = el.rate*price
+                        el.rate = el.rate * price
                         el.idx = count
-                        delivery_note.append("items",el)
-                        delivery_note.save()
-                        print(delivery_note_items, delivery_note_items_copy)
-                    
-            else:
-                delivery_note.save()
+                        el.custom_created_from_service_report_item = item.name
+                        delivery_note.append("items", el)
+                        print(f"Added surcharge item {el} after item index {index}")
+            
+            index += 1
+        
+        delivery_note.save()
+
+
 
 
 def get_surcharges_fur_current_surcharge_Determination(customer_doc):
@@ -607,10 +447,10 @@ def get_start_surcharge(sorted_projected_timeline,work_position):
 
 def create_surcharge_dict_for_work(relevant_surcharge_dict,sorted_work_time_line,start_surcharge, report_doc):
     #Gibt eine Liste von Dictionaries mit zu berechnenden Zuschlägen zurück
-    
+
     surcharge_dict_list = []
-    
-    for el in sorted_work_time_line: 
+
+    for el in sorted_work_time_line:
         if el == min(sorted_work_time_line):
             previous_element = start_surcharge
         else:
@@ -627,8 +467,127 @@ def create_surcharge_dict_for_work(relevant_surcharge_dict,sorted_work_time_line
             break
     print('####****neu erzegt####')
     print(surcharge_dict_list)
-    
+
     return surcharge_dict_list
 
-    
-#     #Hier müssten wir nun innerhalb der Liste alle relevanten Phasen haben, die sich aus Wochentags-Regel ergeben    
+
+# =============================================================================
+# Service Report Work Times Calendar API
+# =============================================================================
+
+@frappe.whitelist()
+def get_service_report_work_times(start, end, employees=None):
+    """
+    Holt Service Report Work Einträge für den Kalender.
+
+    Args:
+        start: Start-Datum (ISO Format YYYY-MM-DD)
+        end: End-Datum (ISO Format YYYY-MM-DD)
+        employees: JSON-Liste von Employee-Namen oder None für aktuellen User
+
+    Returns:
+        Liste von Events für FullCalendar
+    """
+    # Wenn keine Employees angegeben, aktuellen User ermitteln
+    if not employees:
+        current_user = frappe.session.user
+        employee = frappe.db.get_value("Employee", {"user_id": current_user}, "name")
+        if not employee:
+            return []
+        employees = [employee]
+    else:
+        if isinstance(employees, str):
+            employees = json.loads(employees)
+
+    if not employees:
+        return []
+
+    # SQL Query für Service Report Work mit Parent-Daten
+    events = frappe.db.sql("""
+        SELECT
+            srw.name as id,
+            srw.begin as start,
+            srw.end as end,
+            srw.description,
+            srw.hours,
+            srw.service_type,
+            srw.parent as service_report,
+            sr.customer,
+            sr.customer_name,
+            sr.titel as title,
+            sr.employee,
+            e.employee_name
+        FROM `tabService Report Work` srw
+        INNER JOIN `tabService Report` sr ON srw.parent = sr.name
+        INNER JOIN `tabEmployee` e ON sr.employee = e.name
+        WHERE srw.begin >= %(start)s
+        AND srw.begin <= %(end)s
+        AND sr.employee IN %(employees)s
+        ORDER BY srw.begin
+    """, {
+        "start": start,
+        "end": end,
+        "employees": tuple(employees)
+    }, as_dict=True)
+
+    # Events für FullCalendar formatieren
+    formatted_events = []
+    for event in events:
+        formatted_events.append({
+            "id": event.id,
+            "title": f"{event.customer_name}: {event.title or 'Arbeitszeit'}",
+            "start": event.start.isoformat() if event.start else None,
+            "end": event.end.isoformat() if event.end else None,
+            "customer": event.customer,
+            "customer_name": event.customer_name,
+            "extendedProps": {
+                "description": event.description,
+                "service_report": event.service_report,
+                "customer": event.customer,
+                "customer_name": event.customer_name,
+                "employee": event.employee,
+                "employee_name": event.employee_name,
+                "hours": event.hours,
+                "service_type": event.service_type,
+                "title": event.title
+            }
+        })
+
+    return formatted_events
+
+
+@frappe.whitelist()
+def get_technicians():
+    """
+    Holt alle aktiven Techniker (Employees mit User-Verknüpfung).
+
+    Returns:
+        Liste von Employees mit name und employee_name
+    """
+    employees = frappe.get_all(
+        "Employee",
+        filters={"status": "Active", "user_id": ["is", "set"]},
+        fields=["name", "employee_name", "user_id"],
+        order_by="employee_name"
+    )
+
+    return employees
+
+
+@frappe.whitelist()
+def get_current_employee():
+    """
+    Ermittelt den Employee des aktuell eingeloggten Users.
+
+    Returns:
+        Dict mit Employee-Name und employee_name oder None
+    """
+    current_user = frappe.session.user
+    employee = frappe.db.get_value(
+        "Employee",
+        {"user_id": current_user},
+        ["name", "employee_name"],
+        as_dict=True
+    )
+    return employee
+

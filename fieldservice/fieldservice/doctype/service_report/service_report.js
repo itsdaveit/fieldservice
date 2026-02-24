@@ -33,6 +33,32 @@ function format_timer(duration) {
 }
 
 
+function set_link_filters(frm) {
+    // Contact filter
+    if (frm.doc.filter_contact_by_customer && frm.doc.customer) {
+        frm.set_query("contact_person", function() {
+            return {
+                query: "frappe.contacts.doctype.contact.contact.contact_query",
+                filters: { link_doctype: "Customer", link_name: frm.doc.customer }
+            };
+        });
+    } else {
+        frm.set_query("contact_person", function() { return {}; });
+    }
+
+    // Address filter
+    if (frm.doc.filter_address_by_customer && frm.doc.customer) {
+        frm.set_query("customer_address", function() {
+            return {
+                query: "frappe.contacts.doctype.address.address.address_query",
+                filters: { link_doctype: "Customer", link_name: frm.doc.customer }
+            };
+        });
+    } else {
+        frm.set_query("customer_address", function() { return {}; });
+    }
+}
+
 frappe.ui.form.on('Service Report', {
 
 
@@ -58,6 +84,7 @@ frappe.ui.form.on('Service Report', {
         
     },
 	refresh: function(frm) {
+        set_link_filters(frm);
 
         frm.add_custom_button(__('Materialbedarf erstellen'), function() {
             if (frm.doc.customer) {
@@ -172,6 +199,53 @@ frappe.ui.form.on('Service Report', {
             frm.change_custom_button_type("Stop Timer", null, "danger");
             frm.disable_save();
         };
+       
+        // Button to set selected rows to "Without Surcharge"
+        frm.add_custom_button(__('selektierte ohne Zuschlag'), function() {
+            let selected_rows = frm.fields_dict.work.grid.get_selected_children();
+
+            if (selected_rows.length === 0) {
+                frappe.msgprint(__('Bitte wählen Sie mindestens eine Zeile aus.'));
+                return;
+            }
+
+            selected_rows.forEach(function(row) {
+                frappe.model.set_value(row.doctype, row.name, 'ignore_surcharges', 1);
+            });
+
+            frm.refresh_field('work');
+            frappe.show_alert({
+                message: __('Zuschlag für {0} Zeile(n) deaktiviert', [selected_rows.length]),
+                indicator: 'green'
+            });
+        }, __("Funktionen"));
+
+        // Button to set selected rows to "With Surcharge"
+        frm.add_custom_button(__('selektierte mit Zuschlag'), function() {
+            let selected_rows = frm.fields_dict.work.grid.get_selected_children();
+
+            if (selected_rows.length === 0) {
+                frappe.msgprint(__('Bitte wählen Sie mindestens eine Zeile aus.'));
+                return;
+            }
+
+            selected_rows.forEach(function(row) {
+                frappe.model.set_value(row.doctype, row.name, 'ignore_surcharges', 0);
+            });
+
+            frm.refresh_field('work');
+            frappe.show_alert({
+                message: __('Zuschlag für {0} Zeile(n) aktiviert', [selected_rows.length]),
+                indicator: 'green'
+            });
+        }, __("Funktionen"));
+        
+        
+        
+        
+        
+        
+         
         
     },
     
@@ -270,6 +344,13 @@ frappe.ui.form.on('Service Report', {
 
 	customer: function(frm) {
 		erpnext.utils.get_party_details(frm);
+		set_link_filters(frm);
+	},
+	filter_contact_by_customer: function(frm) {
+		set_link_filters(frm);
+	},
+	filter_address_by_customer: function(frm) {
+		set_link_filters(frm);
 	},
 	customer_address: function(frm) {
 		erpnext.utils.get_address_display(frm);
