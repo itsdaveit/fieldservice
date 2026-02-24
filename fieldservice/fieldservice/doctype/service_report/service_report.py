@@ -20,15 +20,17 @@ class ServiceReport(Document):
 		validate_service_report(self, throw_errors=True)
 	
 	def before_save(self):
-		# Use the new validation function with throw_errors=False
-		errors = validate_service_report(self, throw_errors=False)
-		
-		# Display warnings if any
-		if errors:
-			warning_message = _("Warning: The following issues were found:") + "<br>"
-			warning_message += "<br>".join(errors)
-			warning_message += "<br><br>" + _("You can save the document, but these issues must be fixed before submission.")
-			frappe.msgprint(warning_message, indicator="orange", alert=True)
+		# Skip validation warnings during timer start/stop
+		if not self.flags.get("skip_validation"):
+			# Use the new validation function with throw_errors=False
+			errors = validate_service_report(self, throw_errors=False)
+
+			# Display warnings if any
+			if errors:
+				warning_message = _("Warning: The following issues were found:") + "<br>"
+				warning_message += "<br>".join(errors)
+				warning_message += "<br><br>" + _("You can save the document, but these issues must be fixed before submission.")
+				frappe.msgprint(warning_message, indicator="orange", alert=True)
 		
 		# Calculate hours
 		hours_list = []
@@ -47,6 +49,7 @@ def start_timer(service_report):
 	if report_doc.status == "Draft":
 		report_doc.timer_start = datetime.now()
 		report_doc.status = "Started"
+		report_doc.flags.skip_validation = True
 		report_doc.save()
 	else:
 		frappe.throw("Timer is not stopped. Can`t start the timmer.")
@@ -73,6 +76,7 @@ def stop_timer(service_report, description):
 					work.travel_charges = 1
 		report_doc.timer_start = ""
 		report_doc.status = "Draft"
+		report_doc.flags.skip_validation = True
 		report_doc.save()
 
 	else:
