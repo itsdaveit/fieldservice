@@ -129,5 +129,11 @@ fixtures = [
         "filters": {
             "name": "Default Service Report"
         }
+    },
+    {
+        "doctype": "Custom HTML Block",
+        "filters": {
+            "name": "Service Report Work Times Calendar"
+        }
     }
 ]
