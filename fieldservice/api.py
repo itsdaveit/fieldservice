@@ -436,10 +436,10 @@ def get_start_surcharge(sorted_projected_timeline,work_position):
 
 def create_surcharge_dict_for_work(relevant_surcharge_dict,sorted_work_time_line,start_surcharge, report_doc):
     #Gibt eine Liste von Dictionaries mit zu berechnenden Zuschlägen zurück
-    
+
     surcharge_dict_list = []
-    
-    for el in sorted_work_time_line: 
+
+    for el in sorted_work_time_line:
         if el == min(sorted_work_time_line):
             previous_element = start_surcharge
         else:
@@ -456,8 +456,127 @@ def create_surcharge_dict_for_work(relevant_surcharge_dict,sorted_work_time_line
             break
     print('####****neu erzegt####')
     print(surcharge_dict_list)
-    
+
     return surcharge_dict_list
 
-    
-  
+
+# =============================================================================
+# Service Report Work Times Calendar API
+# =============================================================================
+
+@frappe.whitelist()
+def get_service_report_work_times(start, end, employees=None):
+    """
+    Holt Service Report Work Einträge für den Kalender.
+
+    Args:
+        start: Start-Datum (ISO Format YYYY-MM-DD)
+        end: End-Datum (ISO Format YYYY-MM-DD)
+        employees: JSON-Liste von Employee-Namen oder None für aktuellen User
+
+    Returns:
+        Liste von Events für FullCalendar
+    """
+    # Wenn keine Employees angegeben, aktuellen User ermitteln
+    if not employees:
+        current_user = frappe.session.user
+        employee = frappe.db.get_value("Employee", {"user_id": current_user}, "name")
+        if not employee:
+            return []
+        employees = [employee]
+    else:
+        if isinstance(employees, str):
+            employees = json.loads(employees)
+
+    if not employees:
+        return []
+
+    # SQL Query für Service Report Work mit Parent-Daten
+    events = frappe.db.sql("""
+        SELECT
+            srw.name as id,
+            srw.begin as start,
+            srw.end as end,
+            srw.description,
+            srw.hours,
+            srw.service_type,
+            srw.parent as service_report,
+            sr.customer,
+            sr.customer_name,
+            sr.titel as title,
+            sr.employee,
+            e.employee_name
+        FROM `tabService Report Work` srw
+        INNER JOIN `tabService Report` sr ON srw.parent = sr.name
+        INNER JOIN `tabEmployee` e ON sr.employee = e.name
+        WHERE srw.begin >= %(start)s
+        AND srw.begin <= %(end)s
+        AND sr.employee IN %(employees)s
+        ORDER BY srw.begin
+    """, {
+        "start": start,
+        "end": end,
+        "employees": tuple(employees)
+    }, as_dict=True)
+
+    # Events für FullCalendar formatieren
+    formatted_events = []
+    for event in events:
+        formatted_events.append({
+            "id": event.id,
+            "title": f"{event.customer_name}: {event.title or 'Arbeitszeit'}",
+            "start": event.start.isoformat() if event.start else None,
+            "end": event.end.isoformat() if event.end else None,
+            "customer": event.customer,
+            "customer_name": event.customer_name,
+            "extendedProps": {
+                "description": event.description,
+                "service_report": event.service_report,
+                "customer": event.customer,
+                "customer_name": event.customer_name,
+                "employee": event.employee,
+                "employee_name": event.employee_name,
+                "hours": event.hours,
+                "service_type": event.service_type,
+                "title": event.title
+            }
+        })
+
+    return formatted_events
+
+
+@frappe.whitelist()
+def get_technicians():
+    """
+    Holt alle aktiven Techniker (Employees mit User-Verknüpfung).
+
+    Returns:
+        Liste von Employees mit name und employee_name
+    """
+    employees = frappe.get_all(
+        "Employee",
+        filters={"status": "Active", "user_id": ["is", "set"]},
+        fields=["name", "employee_name", "user_id"],
+        order_by="employee_name"
+    )
+
+    return employees
+
+
+@frappe.whitelist()
+def get_current_employee():
+    """
+    Ermittelt den Employee des aktuell eingeloggten Users.
+
+    Returns:
+        Dict mit Employee-Name und employee_name oder None
+    """
+    current_user = frappe.session.user
+    employee = frappe.db.get_value(
+        "Employee",
+        {"user_id": current_user},
+        ["name", "employee_name"],
+        as_dict=True
+    )
+    return employee
+
