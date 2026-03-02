@@ -135,5 +135,17 @@ fixtures = [
         "filters": {
             "name": "Service Report Work Times Calendar"
         }
+    },
+    {
+        "doctype": "Role",
+        "filters": {
+            "name": "Fieldservice User"
+        }
+    },
+    {
+        "doctype": "Custom DocPerm",
+        "filters": {
+            "role": "Fieldservice User"
+        }
     }
 ]
