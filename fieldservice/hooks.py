@@ -141,11 +141,5 @@ fixtures = [
         "filters": {
             "name": "Fieldservice User"
         }
-    },
-    {
-        "doctype": "Custom DocPerm",
-        "filters": {
-            "role": "Fieldservice User"
-        }
     }
 ]
