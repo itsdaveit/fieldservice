@@ -1,0 +1,28 @@
+{
+ "app": "fieldservice",
+ "creation": "2026-03-09 20:39:26.303723",
+ "docstatus": 0,
+ "doctype": "Workspace Sidebar",
+ "header_icon": "clipboard-check",
+ "idx": 0,
+ "items": [
+  {
+   "child": 0,
+   "collapsible": 1,
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "Service Report",
+   "link_to": "Service Report",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-03-09 20:39:26.303723",
+ "modified_by": "Administrator",
+ "module": "Fieldservice",
+ "name": "Service Report",
+ "owner": "Administrator",
+ "standard": 1,
+ "title": "Service Report"
+}
