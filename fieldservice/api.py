@@ -86,9 +86,9 @@ def get_items_from_sr_work(work_positions, report_doc):
         print(work_position.service_type,work_position.travel_charges)
         if work_position.service_type != "Remote Service" and work_position.travel_charges == 1:
             if work_position.address:
-                travel_costs_item = create_travel_item(work_position.address)
+                travel_costs_item = create_travel_item(work_position.address, report_doc, work_position)
             else:
-                travel_costs_item = create_travel_item(report_doc.customer_address)
+                travel_costs_item = create_travel_item(report_doc.customer_address, report_doc, work_position)
             if travel_costs_item:
                 delivery_note_items.append(travel_costs_item)
             else:
@@ -120,17 +120,21 @@ def get_items_from_sr_work(work_positions, report_doc):
     return delivery_note_items
     
 
-def create_travel_item(address):
+def create_travel_item(address, report_doc=None, work_position=None):
 
     address_doc = frappe.get_doc("Address",address)
     item_name = address_doc.travel_costs_item
     if item_name:
         item = frappe.get_doc("Item",item_name)
-        delivery_note_item =  frappe.get_doc({"doctype": "Delivery Note Item",
-                                                    "item_code": item_name,
-                                                    "qty": 1,
-                                                    })
-        # print(item)
+        doc_args = {
+            "doctype": "Delivery Note Item",
+            "item_code": item_name,
+            "qty": 1,
+        }
+        if report_doc and work_position:
+            doc_args["agains_service_report"] = report_doc.name
+            doc_args["custom_created_from_service_report_item"] = work_position.name
+        delivery_note_item = frappe.get_doc(doc_args)
         return delivery_note_item
     else:
         return False
