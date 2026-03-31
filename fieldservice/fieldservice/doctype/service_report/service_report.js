@@ -553,9 +553,14 @@ function show_review_dialog(frm, fixes_data, from_submit) {
     // --- Group fixes by position ---
     let grouped = {};
     let standalone = [];
+    let hints = [];
 
     fixes.forEach(function(fix, index) {
         fix._index = index;
+        if (fix.change_type === 'hint') {
+            hints.push(fix);
+            return;
+        }
         let m = fix.field.match(/^work\[(\d+)\]/);
         if (m) {
             let key = 'work[' + m[1] + ']';
@@ -563,7 +568,6 @@ function show_review_dialog(frm, fixes_data, from_submit) {
             if (fix.field.endsWith('.service_type')) grouped[key].svc = fix;
             else grouped[key].desc = fix;
         } else if (fix.field === 'report_type') {
-            // Global service type — show as standalone with special handling
             standalone.push(fix);
         } else {
             standalone.push(fix);
@@ -656,6 +660,32 @@ function show_review_dialog(frm, fixes_data, from_submit) {
 
         body += '</div>';
     });
+
+    // Hints section (informational, no checkbox)
+    if (hints.length > 0) {
+        body += '<div style="margin-top:16px;padding-top:12px;border-top:2px solid #e0e0e0;">';
+        body += '<div style="display:flex;align-items:center;margin-bottom:10px;"><strong style="font-size:14px;">💡 Hinweise</strong></div>';
+        hints.forEach(function(hint) {
+            let pos_match = hint.field.match(/work\[(\d+)\]/);
+            let pos_label = pos_match ? 'Position ' + (parseInt(pos_match[1]) + 1) : '';
+            let meta = pos_match ? get_work_meta(parseInt(pos_match[1])) : null;
+
+            body += '<div style="margin-bottom:10px;padding:10px 14px;border:1px solid #bbdefb;border-left:4px solid #1976d2;border-radius:4px;background:#e3f2fd;">';
+            body += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
+            body += '<span style="background:#bbdefb;color:#0d47a1;padding:2px 8px;border-radius:10px;font-size:11px;">Hinweis</span>';
+            if (pos_label) {
+                body += '<strong>' + pos_label + '</strong>';
+                if (meta) body += ' ' + svc_type_badge(meta.service_type);
+            }
+            body += '</div>';
+            body += '<div style="font-size:13px;color:#1a237e;">' + hint.message + '</div>';
+            if (hint.original_value && hint.original_value !== hint.message) {
+                body += '<div style="font-size:12px;color:#555;margin-top:4px;">' + hint.original_value + '</div>';
+            }
+            body += '</div>';
+        });
+        body += '</div>';
+    }
 
     body += '</div>';
 

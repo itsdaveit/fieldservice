@@ -415,6 +415,11 @@ Erkenne ob die Arbeit tatsächlich Remote oder Vor-Ort stattfand.
 Starke Vor-Ort-Indikatoren: "vor Ort", "VO", "Mitnahme", "mitgenommen", "aufgebaut", "ausgeliefert", "abgeholt", Verkabelung, Umzug, Einbau, "Serverraum"
 Starke Remote-Indikatoren: "TV Support" (TeamViewer), "Fernwartung", "TRMM", "Telefonat", reine Konfigurationsarbeiten
 
+### 4. Hardware-Hinweise
+Prüfe ob in den Arbeitspositionen Hardware erwähnt wird, die physisch bewegt wurde (aufgebaut, ausgetauscht, installiert, geliefert, mitgebracht, angeschlossen). Vergleiche mit der Liste der erfassten Artikel. Wenn Hardware in den Beschreibungen erwähnt wird, aber NICHT in den Artikeln erfasst ist, gib einen Hinweis.
+Relevante Hardware: PCs, Laptops, Notebooks, Server, Switches, Router, Firewalls, Access Points, DECT-Basen, Mobilteile/Telefone, Monitore, Drucker, USV, NAS, Festplatten, SSDs, Kameras, Kabel, USB-Sticks.
+NUR physisch bewegte Hardware zählt — nicht wenn sie nur konfiguriert oder repariert wird.
+
 ## Wichtig
 - Behalte den technischen Inhalt exakt bei
 - Ändere keine Fakten, Zeitangaben oder Kundennamen
@@ -440,18 +445,29 @@ Antworte NUR mit einem JSON-Objekt in exakt diesem Format (keine Markdown-Codebl
     "empfohlener_typ": "On-Site Service",
     "konfidenz": "sicher",
     "begruendung": "Kurze Begründung"
-  }
+  },
+  "hinweise": [
+    {
+      "typ": "fehlende_hardware",
+      "position_idx": 1,
+      "beschreibung": "SNOM M900 DECT-Basen und Mobilteile wurden aufgebaut/angeschlossen, aber kein Material auf dem Service Report erfasst.",
+      "erkannte_hardware": ["SNOM M900 DECT-Basen", "Mobilteile"]
+    }
+  ]
 }
 Regeln:
 - "korrekturen" enthält NUR Positionen die Korrekturen brauchen (leeres Array wenn alles korrekt)
 - "titel_korrektur.aenderungen" ist leer wenn der Titel korrekt ist
 - "idx" ist 1-basiert (Position 1 = idx 1)
-- "korrigierter_text" muss im <p>• Text</p> HTML-Format sein\
+- "korrigierter_text" muss im <p>• Text</p> HTML-Format sein
+- "hinweise" enthält Hinweise auf mögliche Probleme (leeres Array wenn keine)
+- "hinweise[].typ" kann sein: "fehlende_hardware", "sonstiger_hinweis"
+- "hinweise[].position_idx" ist der 1-basierte Index der betroffenen Position (0 wenn global)\
 """
 
 LLM_RESPONSE_SCHEMA = {
     "type": "object",
-    "required": ["titel_korrektur", "korrekturen", "service_typ_bewertung"],
+    "required": ["titel_korrektur", "korrekturen", "service_typ_bewertung", "hinweise"],
     "additionalProperties": False,
     "properties": {
         "titel_korrektur": {
@@ -511,6 +527,35 @@ LLM_RESPONSE_SCHEMA = {
                 },
                 "begruendung": {"type": "string"}
             }
+        },
+        "hinweise": {
+            "type": "array",
+            "description": "Hinweise auf mögliche Probleme (fehlende Hardware etc.). Leer wenn keine.",
+            "items": {
+                "type": "object",
+                "required": ["typ", "position_idx", "beschreibung"],
+                "additionalProperties": False,
+                "properties": {
+                    "typ": {
+                        "type": "string",
+                        "enum": ["fehlende_hardware", "sonstiger_hinweis"],
+                        "description": "Art des Hinweises"
+                    },
+                    "position_idx": {
+                        "type": "integer",
+                        "description": "1-basierter Index der betroffenen Position, 0 wenn global"
+                    },
+                    "beschreibung": {
+                        "type": "string",
+                        "description": "Menschenlesbarer Hinweistext"
+                    },
+                    "erkannte_hardware": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Liste der erkannten Hardware-Bezeichnungen"
+                    }
+                }
+            }
         }
     }
 }
@@ -564,12 +609,21 @@ class LLMTextCorrectionStep(ReviewStep):
         if not positions:
             return []
 
+        # Build items list
+        items_text = "(keine Artikel erfasst)"
+        if hasattr(doc, 'items') and doc.items:
+            items_lines = []
+            for it in doc.items:
+                items_lines.append(f"- {getattr(it, 'item_code', '?')}: {getattr(it, 'item_name', '?')} (Menge: {getattr(it, 'qty', '?')})")
+            items_text = "\n".join(items_lines)
+
         user_prompt = (
             f"## Service Report\n\n"
             f"**Titel:** {getattr(doc, 'titel', '') or ''}\n"
             f"**Service-Typ (gewählt):** {getattr(doc, 'report_type', '') or ''}\n\n"
             f"### Arbeitspositionen:\n\n" +
-            "\n\n".join(positions)
+            "\n\n".join(positions) +
+            f"\n\n### Erfasste Artikel:\n{items_text}"
         )
 
         # Call Claude API with tool use to enforce JSON schema
@@ -690,6 +744,31 @@ class LLMTextCorrectionStep(ReviewStep):
                     change_type="suggestion",
                     message=f"Service-Typ: {typ_bew.get('begruendung', '')}",
                 ))
+
+        # --- Hinweise (fehlende Hardware etc.) ---
+        for hinweis in (data.get("hinweise") or []):
+            if not isinstance(hinweis, dict):
+                continue
+            typ = hinweis.get("typ", "sonstiger_hinweis")
+            pos_idx = hinweis.get("position_idx", 0)
+            beschreibung = hinweis.get("beschreibung", "")
+            hardware = hinweis.get("erkannte_hardware", [])
+
+            if typ == "fehlende_hardware" and hardware:
+                hw_list = ", ".join(hardware)
+                message = f"Möglicherweise fehlendes Material: {hw_list}"
+            else:
+                message = beschreibung
+
+            field = f"work[{pos_idx - 1}].hint" if pos_idx > 0 else "hint"
+            results.append(ReviewResult(
+                step_name=self.name,
+                field=field,
+                original_value=beschreibung,
+                suggested_value=None,
+                change_type="hint",
+                message=message,
+            ))
 
         return results
 
