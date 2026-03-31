@@ -171,7 +171,7 @@ def format_as_bullet_list(items: list[dict]) -> str:
 
     if not parts:
         return ''
-    return '<ol>' + ''.join(parts) + '</ol>'
+    return '<ul>' + ''.join(parts) + '</ul>'
 
 
 # ---------------------------------------------------------------------------
