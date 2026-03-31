@@ -587,17 +587,26 @@ function show_review_dialog(frm, fixes_data, from_submit) {
         let border = is_svc ? '#ff9800' : 'var(--border-color)';
 
         body += '<div style="margin-bottom:12px;padding:12px;border:1px solid '+border+';border-radius:6px;background:#fff;">';
-        body += '<div style="display:flex;align-items:center;margin-bottom:8px;">';
-        body += '<input type="checkbox" checked data-fix-index="'+fix._index+'" style="width:18px;height:18px;margin-right:10px;cursor:pointer;accent-color:'+(is_svc?'#ff9800':'#e73249')+'">';
-        body += '<strong>'+label+'</strong>'+badge_html;
-        body += '<span style="color:var(--text-muted);margin-left:auto;font-size:12px;">'+fix.message+'</span>';
-        body += '</div>';
 
         if (is_svc) {
+            // Service type card with better layout
+            body += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
+            body += '<input type="checkbox" checked data-fix-index="'+fix._index+'" style="width:18px;height:18px;cursor:pointer;accent-color:#ff9800;">';
+            body += '<strong style="font-size:14px;">'+label+'</strong>';
+            body += '</div>';
+            // Begründung
+            let reason = fix.message.replace(/^Service-Typ:\s*/, '');
+            body += '<div style="font-size:12px;color:#555;margin-bottom:10px;line-height:1.4;">'+reason+'</div>';
+            // Badges
             body += '<div style="padding:8px 12px;background:#fff3e0;border-radius:4px;">';
-            body += svc_type_badge(fix.original_value) + ' <span style="margin:0 6px;">\u2192</span> ' + svc_type_badge(fix.suggested_value);
+            body += svc_type_badge(fix.original_value) + ' <span style="margin:0 8px;font-size:16px;">\u2192</span> ' + svc_type_badge(fix.suggested_value);
             body += '</div>';
         } else {
+            body += '<div style="display:flex;align-items:center;margin-bottom:8px;">';
+            body += '<input type="checkbox" checked data-fix-index="'+fix._index+'" style="width:18px;height:18px;margin-right:10px;cursor:pointer;accent-color:#e73249;">';
+            body += '<strong>'+label+'</strong>'+badge_html;
+            body += '<span style="color:var(--text-muted);margin-left:auto;font-size:12px;">'+fix.message+'</span>';
+            body += '</div>';
             body += '<div style="padding:10px 14px;background:#fafafa;border-radius:4px;line-height:1.6;">'+diff_html(fix.original_value, fix.suggested_value)+'</div>';
         }
         body += '</div>';
