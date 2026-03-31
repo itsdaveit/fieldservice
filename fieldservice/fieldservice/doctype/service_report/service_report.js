@@ -91,7 +91,7 @@ frappe.ui.form.on('Service Report', {
         }
 
         if(frm.doc.docstatus===1) {
-            cur_frm.add_custom_button(__("\u{1F4CB} Create Delivery Note"), function() {
+            cur_frm.add_custom_button(__("📋 Create Delivery Note"), function() {
                 frappe.call({
                     "method": "fieldservice.api.insert_surchargs_in_delivery_note",
                     args: {
@@ -185,7 +185,7 @@ frappe.ui.form.on('Service Report', {
         });
 
         // Button to set selected rows to "Without Surcharge"
-        frm.add_custom_button(__('\u2716 Selektierte ohne Zuschlag'), function() {
+        frm.add_custom_button(__('🚫 Selektierte ohne Zuschlag'), function() {
             let selected_rows = frm.fields_dict.work.grid.get_selected_children();
 
             if (selected_rows.length === 0) {
@@ -205,7 +205,7 @@ frappe.ui.form.on('Service Report', {
         }, __("Aktionen"));
 
         // Button to set selected rows to "With Surcharge"
-        frm.add_custom_button(__('\u2714 Selektierte mit Zuschlag'), function() {
+        frm.add_custom_button(__('💰 Selektierte mit Zuschlag'), function() {
             let selected_rows = frm.fields_dict.work.grid.get_selected_children();
 
             if (selected_rows.length === 0) {
@@ -226,7 +226,7 @@ frappe.ui.form.on('Service Report', {
 
         // Review Pipeline button (only in Draft)
         if (frm.doc.status === "Draft" && !frm.is_new()) {
-            frm.add_custom_button(__('\u270E Beschreibungen pr\u00FCfen'), function() {
+            frm.add_custom_button(__('✏️ Beschreibungen prüfen'), function() {
                 frappe.call({
                     method: 'fieldservice.fieldservice.doctype.service_report.service_report.run_review',
                     args: { service_report: frm.doc.name },
@@ -238,7 +238,16 @@ frappe.ui.form.on('Service Report', {
             }, __("Aktionen"));
         }
 
-        frm.page.set_inner_btn_group_as_primary(__("Aktionen"));
+        // Style Aktionen button like Sales Invoice (itsdave red)
+        setTimeout(() => {
+            frm.$wrapper
+                .find('.inner-group-button[data-label="' + __("Aktionen") + '"] > .btn')
+                .css({
+                    "background-color": "#e73249",
+                    "border-color": "#e73249",
+                    "color": "#fff",
+                });
+        }, 100);
 
     },
 
