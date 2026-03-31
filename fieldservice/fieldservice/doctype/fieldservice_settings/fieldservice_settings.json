@@ -63,9 +63,8 @@
   },
   {
    "fieldname": "ai_system_prompt",
-   "fieldtype": "Code",
+   "fieldtype": "Small Text",
    "label": "System Prompt",
-   "options": "Plain Text",
    "depends_on": "enable_ai_review",
    "description": "Der System-Prompt fuer die KI-Textkorrektur. Wird bei jedem Aufruf an die KI gesendet."
   }
