@@ -56,10 +56,11 @@
   },
   {
    "fieldname": "ai_model",
-   "fieldtype": "Data",
+   "fieldtype": "Select",
    "label": "Modell",
    "default": "claude-sonnet-4-20250514",
-   "depends_on": "enable_ai_review"
+   "depends_on": "enable_ai_review",
+   "options": "claude-sonnet-4-20250514"
   },
   {
    "fieldname": "ai_system_prompt",
