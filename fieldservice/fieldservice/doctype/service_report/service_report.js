@@ -633,8 +633,11 @@ function show_review_dialog(frm, fixes_data, from_submit) {
             body += '<div style="padding:10px 14px;background:#fafafa;border-radius:4px;line-height:1.6;margin-bottom:6px;">'+diff_html(fix.original_value, fix.suggested_value)+'</div>';
             // Editable text field for custom formulation
             body += '<details style="margin-top:4px;"><summary style="cursor:pointer;font-size:12px;color:var(--text-muted);">Eigene Formulierung eingeben</summary>';
-            let prefill = extract_lines(fix.suggested_value).join('\n');
-            body += '<textarea data-custom-text-index="'+fix._index+'" data-original-prefill="'+encodeURIComponent(prefill)+'" style="width:100%;min-height:60px;margin-top:6px;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:13px;font-family:inherit;overflow:hidden;resize:vertical;">'+prefill+'</textarea>';
+            let prefill_lines = extract_lines(fix.suggested_value);
+            let prefill = prefill_lines.join('\n');
+            let line_count = Math.max(prefill_lines.length, 3);
+            let ta_height = (line_count * 22) + 20;
+            body += '<textarea data-custom-text-index="'+fix._index+'" data-original-prefill="'+encodeURIComponent(prefill)+'" style="width:100%;height:'+ta_height+'px;margin-top:6px;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:13px;font-family:inherit;resize:vertical;line-height:20px;">'+prefill+'</textarea>';
             body += '</details>';
         }
 
