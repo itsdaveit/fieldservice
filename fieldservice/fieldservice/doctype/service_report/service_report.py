@@ -174,12 +174,16 @@ def apply_review(service_report, fixes):
 		if field == 'titel':
 			doc.titel = suggested
 			applied += 1
+		elif field == 'report_type':
+			doc.report_type = suggested
+			applied += 1
 		else:
-			m = re.match(r'work\[(\d+)\]\.description', field)
+			m = re.match(r'work\[(\d+)\]\.(description|service_type)', field)
 			if m:
 				idx = int(m.group(1))
+				attr = m.group(2)
 				if idx < len(doc.work):
-					doc.work[idx].description = suggested
+					setattr(doc.work[idx], attr, suggested)
 					applied += 1
 
 	if applied:

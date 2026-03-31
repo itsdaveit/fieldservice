@@ -524,6 +524,22 @@ def _strip_html(html: str) -> str:
     return re.sub(r'\s+', ' ', text).strip()
 
 
+def _capitalize_labels(labels: list) -> list:
+    """Capitalize correction type labels for display."""
+    if not isinstance(labels, list):
+        return labels
+    mapping = {
+        "rechtschreibung": "Rechtschreibung",
+        "grammatik": "Grammatik",
+        "grossschreibung": "Großschreibung",
+        "formulierung": "Formulierung",
+        "formatierung": "Formatierung",
+        "textkorrektur": "Textkorrektur",
+        "korrigiert": "Korrigiert",
+    }
+    return [mapping.get(l, l.capitalize() if isinstance(l, str) else l) for l in labels]
+
+
 class LLMTextCorrectionStep(ReviewStep):
     """Call Claude API to correct spelling, grammar, and phrasing."""
 
@@ -598,8 +614,8 @@ class LLMTextCorrectionStep(ReviewStep):
             korrigiert = titel_korr.get("korrigiert", "")
             needs_fix = titel_korr.get("aenderungen") or titel_korr.get("benoetigt_korrektur")
             if needs_fix and korrigiert and korrigiert != original:
-                aenderungen = titel_korr.get("aenderungen", [])
-                msg = "Titel: " + (", ".join(aenderungen) if isinstance(aenderungen, list) and aenderungen else "korrigiert")
+                aenderungen = _capitalize_labels(titel_korr.get("aenderungen", []))
+                msg = "Titel: " + (", ".join(aenderungen) if isinstance(aenderungen, list) and aenderungen else "Korrigiert")
                 results.append(ReviewResult(
                     step_name=self.name, field="titel",
                     original_value=original, suggested_value=korrigiert,
@@ -639,7 +655,7 @@ class LLMTextCorrectionStep(ReviewStep):
                 if not aenderungen and isinstance(korr.get("beschreibung"), dict):
                     if korr["beschreibung"].get("benoetigt_korrektur"):
                         aenderungen = ["textkorrektur"]
-                msg_parts = aenderungen if isinstance(aenderungen, list) and aenderungen else ["korrigiert"]
+                msg_parts = _capitalize_labels(aenderungen if isinstance(aenderungen, list) and aenderungen else ["Korrigiert"])
                 results.append(ReviewResult(
                     step_name=self.name, field=field_key,
                     original_value=current, suggested_value=suggested,
@@ -647,29 +663,33 @@ class LLMTextCorrectionStep(ReviewStep):
                     message=f"Position {idx+1}: " + ", ".join(msg_parts),
                 ))
 
-            # Service type per position
+            # Service type per position — link to work[idx].service_type
             svc = korr.get("service_typ")
             if isinstance(svc, dict) and svc.get("benoetigt_aenderung"):
                 results.append(ReviewResult(
-                    step_name=self.name, field="report_type",
+                    step_name=self.name,
+                    field=f"work[{idx}].service_type",
                     original_value=svc.get("original", ""),
                     suggested_value=svc.get("empfohlen", ""),
-                    change_type="warning",
-                    message=f"Position {idx+1} Service-Typ: {svc.get('begruendung', '')}",
+                    change_type="suggestion",
+                    message=f"Service-Typ: {svc.get('begruendung', '')}",
                 ))
 
-        # --- Global service type warning ---
+        # --- Global service type warning (fallback) ---
         typ_bew = data.get("service_typ_bewertung") or {}
         if (isinstance(typ_bew, dict) and typ_bew.get("empfohlener_typ") and
                 typ_bew.get("empfohlener_typ") != typ_bew.get("aktueller_typ") and
                 typ_bew.get("konfidenz") in ("sicher", "wahrscheinlich")):
-            results.append(ReviewResult(
-                step_name=self.name, field="report_type",
-                original_value=typ_bew.get("aktueller_typ", ""),
-                suggested_value=typ_bew.get("empfohlener_typ", ""),
-                change_type="warning",
-                message=f"Service-Typ: {typ_bew.get('begruendung', '')}",
-            ))
+            # Only add if no per-position service type results exist
+            has_per_pos = any(r.field.endswith('.service_type') for r in results)
+            if not has_per_pos:
+                results.append(ReviewResult(
+                    step_name=self.name, field="report_type",
+                    original_value=typ_bew.get("aktueller_typ", ""),
+                    suggested_value=typ_bew.get("empfohlener_typ", ""),
+                    change_type="suggestion",
+                    message=f"Service-Typ: {typ_bew.get('begruendung', '')}",
+                ))
 
         return results
 

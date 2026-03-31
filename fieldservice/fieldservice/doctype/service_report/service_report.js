@@ -522,41 +522,86 @@ function show_review_dialog(frm, fixes_data, from_submit) {
             .replace(/<\/div>\s*$/g, '');
     }
 
-    // Build dialog body with checkboxes and diff view
-    let body = '<div class="review-results" style="font-size:13px;">';
+    // Group fixes by position — service_type changes belong with their position's card
+    // Build a map: work[idx] -> {description fix, service_type fix}
+    let grouped = {};  // key: "titel" or "work[0]" etc, value: {desc: fix, svc: fix}
+    let standalone = [];  // fixes that don't belong to a position group
+
     fixes.forEach(function(fix, index) {
-        let field_match = fix.field.match(/work\[(\d+)\]/);
-        let pos_label = field_match ? 'Position ' + (parseInt(field_match[1]) + 1) : (fix.field === 'titel' ? 'Titel' : fix.field);
-        let is_warning = fix.change_type === 'warning';
-        let border_color = is_warning ? '#ff9800' : 'var(--border-color)';
-        let badge = is_warning
-            ? '<span style="background:#fff3e0;color:#e65100;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:8px;">Hinweis</span>'
-            : '<span style="background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:8px;">Korrektur</span>';
-
-        body += '<div style="margin-bottom:12px;padding:12px;border:1px solid ' + border_color + ';border-radius:6px;background:#fff;">';
-
-        // Header with checkbox
-        body += '<div style="display:flex;align-items:center;margin-bottom:8px;">';
-        if (!is_warning) {
-            body += '<input type="checkbox" checked data-fix-index="' + index + '" style="width:18px;height:18px;margin-right:10px;cursor:pointer;accent-color:#e73249;">';
+        fix._index = index;  // preserve original index for checkbox data attr
+        let m = fix.field.match(/^work\[(\d+)\]/);
+        if (m) {
+            let key = 'work[' + m[1] + ']';
+            if (!grouped[key]) grouped[key] = {};
+            if (fix.field.endsWith('.service_type')) {
+                grouped[key].svc = fix;
+            } else {
+                grouped[key].desc = fix;
+            }
+        } else {
+            standalone.push(fix);
         }
-        body += '<strong>' + pos_label + '</strong>' + badge;
+    });
+
+    // Build dialog body
+    let body = '<div class="review-results" style="font-size:13px;">';
+
+    // Standalone fixes (titel, global report_type)
+    standalone.forEach(function(fix) {
+        let label = fix.field === 'titel' ? 'Titel' : fix.field;
+        let badge = '<span style="background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:8px;">Korrektur</span>';
+
+        body += '<div style="margin-bottom:12px;padding:12px;border:1px solid var(--border-color);border-radius:6px;background:#fff;">';
+        body += '<div style="display:flex;align-items:center;margin-bottom:8px;">';
+        body += '<input type="checkbox" checked data-fix-index="' + fix._index + '" style="width:18px;height:18px;margin-right:10px;cursor:pointer;accent-color:#e73249;">';
+        body += '<strong>' + label + '</strong>' + badge;
         body += '<span style="color:var(--text-muted);margin-left:auto;font-size:12px;">' + fix.message + '</span>';
         body += '</div>';
+        body += '<div style="padding:10px 14px;background:#fafafa;border-radius:4px;line-height:1.6;">' + diff_html(fix.original_value, fix.suggested_value) + '</div>';
+        body += '</div>';
+    });
 
-        if (is_warning) {
-            // Warning: just show message
+    // Grouped position fixes (description + optional service_type in same card)
+    Object.keys(grouped).sort().forEach(function(key) {
+        let group = grouped[key];
+        let m = key.match(/work\[(\d+)\]/);
+        let pos_num = parseInt(m[1]) + 1;
+        let has_svc = !!group.svc;
+        let has_desc = !!group.desc;
+        let border = has_svc ? '#ff9800' : 'var(--border-color)';
+
+        body += '<div style="margin-bottom:12px;padding:12px;border:1px solid ' + border + ';border-radius:6px;background:#fff;">';
+
+        // Description correction
+        if (has_desc) {
+            let fix = group.desc;
+            let badge = '<span style="background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:8px;">Korrektur</span>';
+            body += '<div style="display:flex;align-items:center;margin-bottom:8px;">';
+            body += '<input type="checkbox" checked data-fix-index="' + fix._index + '" style="width:18px;height:18px;margin-right:10px;cursor:pointer;accent-color:#e73249;">';
+            body += '<strong>Position ' + pos_num + '</strong>' + badge;
+            body += '<span style="color:var(--text-muted);margin-left:auto;font-size:12px;">' + fix.message + '</span>';
+            body += '</div>';
+            body += '<div style="padding:10px 14px;background:#fafafa;border-radius:4px;line-height:1.6;">' + diff_html(fix.original_value, fix.suggested_value) + '</div>';
+        }
+
+        // Service type suggestion (within same card)
+        if (has_svc) {
+            let fix = group.svc;
+            let svc_badge = '<span style="background:#fff3e0;color:#e65100;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:8px;">Service-Typ</span>';
+            body += '<div style="' + (has_desc ? 'margin-top:10px;padding-top:10px;border-top:1px dashed #ddd;' : '') + 'display:flex;align-items:center;margin-bottom:6px;">';
+            body += '<input type="checkbox" checked data-fix-index="' + fix._index + '" style="width:18px;height:18px;margin-right:10px;cursor:pointer;accent-color:#ff9800;">';
+            if (!has_desc) body += '<strong>Position ' + pos_num + '</strong>';
+            body += svc_badge;
+            body += '<span style="color:var(--text-muted);margin-left:auto;font-size:12px;">' + fix.message + '</span>';
+            body += '</div>';
             body += '<div style="padding:8px 12px;background:#fff3e0;border-radius:4px;">';
             body += fix.original_value + ' \u2192 <strong>' + fix.suggested_value + '</strong>';
             body += '</div>';
-        } else {
-            // Diff view
-            let diff = diff_html(fix.original_value, fix.suggested_value);
-            body += '<div style="padding:10px 14px;background:#fafafa;border-radius:4px;line-height:1.6;">' + diff + '</div>';
         }
 
         body += '</div>';
     });
+
     body += '</div>';
 
     let primary_label = from_submit ? __('Ausgewählte übernehmen & buchen') : __('Ausgewählte übernehmen');
@@ -574,10 +619,9 @@ function show_review_dialog(frm, fixes_data, from_submit) {
         ],
         primary_action_label: primary_label,
         primary_action: function() {
-            // Collect only checked fixes
+            // Collect only checked fixes (including service_type suggestions)
             let selected_fixes = [];
             fixes.forEach(function(fix, index) {
-                if (fix.change_type === 'warning') return; // warnings are not applied
                 let cb = d.$wrapper.find('input[data-fix-index="' + index + '"]');
                 if (cb.length && cb.is(':checked')) {
                     selected_fixes.push(fix);
@@ -594,12 +638,15 @@ function show_review_dialog(frm, fixes_data, from_submit) {
                 selected_fixes.forEach(function(fix) {
                     if (fix.field === 'titel') {
                         frm.doc.titel = fix.suggested_value;
+                    } else if (fix.field === 'report_type') {
+                        frm.doc.report_type = fix.suggested_value;
                     } else {
-                        let fm = fix.field.match(/work\[(\d+)\]\.description/);
+                        let fm = fix.field.match(/work\[(\d+)\]\.(description|service_type)/);
                         if (fm) {
                             let idx = parseInt(fm[1]);
+                            let attr = fm[2];
                             if (idx < frm.doc.work.length) {
-                                frm.doc.work[idx].description = fix.suggested_value;
+                                frm.doc.work[idx][attr] = fix.suggested_value;
                             }
                         }
                     }
