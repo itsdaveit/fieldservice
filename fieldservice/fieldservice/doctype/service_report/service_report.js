@@ -634,7 +634,7 @@ function show_review_dialog(frm, fixes_data, from_submit) {
             // Editable text field for custom formulation
             body += '<details style="margin-top:4px;"><summary style="cursor:pointer;font-size:12px;color:var(--text-muted);">Eigene Formulierung eingeben</summary>';
             let prefill = extract_lines(fix.suggested_value).join('\n');
-            body += '<textarea data-custom-text-index="'+fix._index+'" data-original-prefill="'+encodeURIComponent(prefill)+'" style="width:100%;min-height:60px;margin-top:6px;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:13px;font-family:inherit;">'+prefill+'</textarea>';
+            body += '<textarea data-custom-text-index="'+fix._index+'" data-original-prefill="'+encodeURIComponent(prefill)+'" style="width:100%;min-height:60px;margin-top:6px;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:13px;font-family:inherit;overflow:hidden;resize:vertical;">'+prefill+'</textarea>';
             body += '</details>';
         }
 
@@ -732,6 +732,22 @@ function show_review_dialog(frm, fixes_data, from_submit) {
 
     d.$wrapper.find('.modal-dialog').css('max-width', '960px');
     d.show();
+
+    // Auto-resize textareas when details is toggled open
+    function autosize(ta) {
+        ta.style.height = 'auto';
+        ta.style.height = ta.scrollHeight + 'px';
+    }
+    d.$wrapper.find('details').on('toggle', function() {
+        if (this.open) {
+            let ta = this.querySelector('textarea');
+            if (ta) setTimeout(() => autosize(ta), 10);
+        }
+    });
+    // Also auto-resize on input
+    d.$wrapper.find('textarea[data-custom-text-index]').on('input', function() {
+        autosize(this);
+    });
 }
 
 // Hook into frappe submit to intercept review_required errors
