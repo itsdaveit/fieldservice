@@ -255,7 +255,7 @@ frappe.ui.form.on('Service Report', {
         }
 
         // AI Review Log button (System Manager only)
-        if (frappe.user_roles.includes('System Manager') && frm.doc.ai_reviews && frm.doc.ai_reviews.length > 0) {
+        if (frappe.user_roles.includes('System Manager')) {
             frm.add_custom_button(__('📊 KI-Review Protokoll'), function() {
                 show_ai_review_log(frm);
             }, __("Aktionen"));
@@ -831,12 +831,16 @@ function show_review_dialog(frm, fixes_data, from_submit) {
 
 function show_ai_review_log(frm) {
     let reviews = frm.doc.ai_reviews || [];
-    if (!reviews.length) {
-        frappe.msgprint(__('Keine KI-Reviews vorhanden.'));
-        return;
-    }
 
     let body = '<div style="font-size:13px;">';
+
+    if (!reviews.length) {
+        body += '<div style="text-align:center;padding:30px 20px;color:var(--text-muted);">';
+        body += '<div style="font-size:32px;margin-bottom:10px;">📋</div>';
+        body += '<div style="font-size:14px;">Noch keine KI-Reviews durchgeführt.</div>';
+        body += '<div style="font-size:12px;margin-top:6px;">Verwende den Button <strong>🤖 KI-Textkorrektur</strong> um eine Prüfung zu starten.</div>';
+        body += '</div>';
+    }
 
     reviews.slice().reverse().forEach(function(review, i) {
         let ts = frappe.datetime.str_to_user(review.timestamp);
