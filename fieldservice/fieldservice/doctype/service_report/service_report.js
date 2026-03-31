@@ -413,55 +413,111 @@ frappe.ui.form.on('Service Report Work',{
 function show_review_dialog(frm, fixes_data, from_submit) {
     let fixes;
     try {
-        if (typeof fixes_data === 'string') {
-            fixes = JSON.parse(fixes_data);
-        } else {
-            fixes = fixes_data;
-        }
+        fixes = typeof fixes_data === 'string' ? JSON.parse(fixes_data) : fixes_data;
     } catch(e) {
         frappe.msgprint(__('Error parsing review data'));
         return;
     }
 
-    // Convert Quill bullet HTML to readable preview HTML
-    function quill_to_preview(html) {
-        if (!html) return '';
-        let preview = html
-            // Remove ql-editor wrapper
-            .replace(/<div class="ql-editor[^"]*">/g, '')
-            // Remove ol/ul wrappers
-            .replace(/<\/?ol>/g, '')
-            .replace(/<\/?ul>/g, '')
-            // Replace bullet list items with simple bullet divs
-            .replace(/<li data-list="bullet"><span[^>]*><\/span>\s*/g, '<div style="margin-bottom:2px;">\u2022 ')
-            .replace(/<\/li>/g, '</div>')
-            // Remove trailing wrapper divs
-            .replace(/<\/div>\s*$/g, '');
-        return preview;
+    // Strip HTML tags for plain text comparison
+    function strip_html(html) {
+        return (html || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim();
     }
 
-    let body = '<div class="review-results">';
-    fixes.forEach(function(fix) {
-        let field_match = fix.field.match(/work\[(\d+)\]/);
-        let pos_label = field_match ? 'Position ' + (parseInt(field_match[1]) + 1) : fix.field;
+    // Word-level diff with highlighting
+    function diff_html(original_html, suggested_html) {
+        let orig = strip_html(original_html);
+        let sugg = strip_html(suggested_html);
+        let orig_words = orig.split(/\s+/);
+        let sugg_words = sugg.split(/\s+/);
 
-        body += '<div style="margin-bottom: 15px; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px;">';
-        body += '<strong>' + pos_label + '</strong> &mdash; ' + fix.message + '<br>';
-        body += '<div style="margin-top: 8px;">';
-        body += '<div style="margin-bottom: 5px;"><span class="text-muted">Vorher:</span></div>';
-        body += '<div style="padding: 8px 12px; background: var(--bg-light-gray, #f5f5f5); border-radius: 4px; margin-bottom: 8px; max-height: 300px; overflow-y: auto;">' + quill_to_preview(fix.original_value) + '</div>';
-        body += '<div style="margin-bottom: 5px;"><span class="text-muted">Nachher:</span></div>';
-        body += '<div style="padding: 8px 12px; background: #e8f5e9; border-radius: 4px; margin-bottom: 8px; max-height: 300px; overflow-y: auto;">' + quill_to_preview(fix.suggested_value) + '</div>';
-        body += '</div></div>';
+        // Simple LCS-based word diff
+        let m = orig_words.length, n = sugg_words.length;
+        let dp = Array.from({length: m + 1}, () => Array(n + 1).fill(0));
+        for (let i = 1; i <= m; i++)
+            for (let j = 1; j <= n; j++)
+                dp[i][j] = orig_words[i-1] === sugg_words[j-1]
+                    ? dp[i-1][j-1] + 1
+                    : Math.max(dp[i-1][j], dp[i][j-1]);
+
+        // Backtrack to build diff
+        let result = [];
+        let i = m, j = n;
+        while (i > 0 || j > 0) {
+            if (i > 0 && j > 0 && orig_words[i-1] === sugg_words[j-1]) {
+                result.unshift({type: 'equal', text: orig_words[i-1]});
+                i--; j--;
+            } else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) {
+                result.unshift({type: 'add', text: sugg_words[j-1]});
+                j--;
+            } else {
+                result.unshift({type: 'del', text: orig_words[i-1]});
+                i--;
+            }
+        }
+
+        return result.map(function(w) {
+            if (w.type === 'del') return '<span style="background:#ffcdd2;text-decoration:line-through;padding:1px 2px;border-radius:2px;">' + w.text + '</span>';
+            if (w.type === 'add') return '<span style="background:#c8e6c9;padding:1px 2px;border-radius:2px;font-weight:500;">' + w.text + '</span>';
+            return w.text;
+        }).join(' ');
+    }
+
+    // Convert Quill bullet HTML to readable preview
+    function quill_to_preview(html) {
+        if (!html) return '';
+        return html
+            .replace(/<div class="ql-editor[^"]*">/g, '')
+            .replace(/<\/?ol>/g, '').replace(/<\/?ul>/g, '')
+            .replace(/<li data-list="bullet"><span[^>]*><\/span>\s*/g, '<div style="margin-bottom:2px;">\u2022 ')
+            .replace(/<\/li>/g, '</div>')
+            .replace(/<\/div>\s*$/g, '');
+    }
+
+    // Build dialog body with checkboxes and diff view
+    let body = '<div class="review-results" style="font-size:13px;">';
+    fixes.forEach(function(fix, index) {
+        let field_match = fix.field.match(/work\[(\d+)\]/);
+        let pos_label = field_match ? 'Position ' + (parseInt(field_match[1]) + 1) : (fix.field === 'titel' ? 'Titel' : fix.field);
+        let is_warning = fix.change_type === 'warning';
+        let border_color = is_warning ? '#ff9800' : 'var(--border-color)';
+        let badge = is_warning
+            ? '<span style="background:#fff3e0;color:#e65100;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:8px;">Hinweis</span>'
+            : '<span style="background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:8px;">Korrektur</span>';
+
+        body += '<div style="margin-bottom:12px;padding:12px;border:1px solid ' + border_color + ';border-radius:6px;background:#fff;">';
+
+        // Header with checkbox
+        body += '<div style="display:flex;align-items:center;margin-bottom:8px;">';
+        if (!is_warning) {
+            body += '<input type="checkbox" checked data-fix-index="' + index + '" style="width:18px;height:18px;margin-right:10px;cursor:pointer;accent-color:#e73249;">';
+        }
+        body += '<strong>' + pos_label + '</strong>' + badge;
+        body += '<span style="color:var(--text-muted);margin-left:auto;font-size:12px;">' + fix.message + '</span>';
+        body += '</div>';
+
+        if (is_warning) {
+            // Warning: just show message
+            body += '<div style="padding:8px 12px;background:#fff3e0;border-radius:4px;">';
+            body += fix.original_value + ' \u2192 <strong>' + fix.suggested_value + '</strong>';
+            body += '</div>';
+        } else {
+            // Diff view
+            let diff = diff_html(fix.original_value, fix.suggested_value);
+            body += '<div style="padding:10px 14px;background:#fafafa;border-radius:4px;line-height:1.6;">' + diff + '</div>';
+        }
+
+        body += '</div>';
     });
     body += '</div>';
 
-    let primary_label = from_submit ? __('Uebernehmen & Buchen') : __('Uebernehmen');
+    let primary_label = from_submit ? __('Ausgewählte übernehmen & buchen') : __('Ausgewählte übernehmen');
     let secondary_label = from_submit ? __('Ohne Korrektur buchen') : __('Abbrechen');
 
     let d = new frappe.ui.Dialog({
-        title: __('Beschreibungen pruefen'),
-        size: 'large',
+        title: __('Beschreibungen prüfen'),
+        size: 'extra-large',
         fields: [
             {
                 fieldtype: 'HTML',
@@ -471,15 +527,33 @@ function show_review_dialog(frm, fixes_data, from_submit) {
         ],
         primary_action_label: primary_label,
         primary_action: function() {
+            // Collect only checked fixes
+            let selected_fixes = [];
+            fixes.forEach(function(fix, index) {
+                if (fix.change_type === 'warning') return; // warnings are not applied
+                let cb = d.$wrapper.find('input[data-fix-index="' + index + '"]');
+                if (cb.length && cb.is(':checked')) {
+                    selected_fixes.push(fix);
+                }
+            });
+
+            if (selected_fixes.length === 0) {
+                frappe.msgprint(__('Keine Korrekturen ausgewählt.'));
+                return;
+            }
+
             d.hide();
             if (from_submit) {
-                // Apply locally, save, then re-submit
-                fixes.forEach(function(fix) {
-                    let field_match = fix.field.match(/work\[(\d+)\]\.description/);
-                    if (field_match) {
-                        let idx = parseInt(field_match[1]);
-                        if (idx < frm.doc.work.length) {
-                            frm.doc.work[idx].description = fix.suggested_value;
+                selected_fixes.forEach(function(fix) {
+                    if (fix.field === 'titel') {
+                        frm.doc.titel = fix.suggested_value;
+                    } else {
+                        let fm = fix.field.match(/work\[(\d+)\]\.description/);
+                        if (fm) {
+                            let idx = parseInt(fm[1]);
+                            if (idx < frm.doc.work.length) {
+                                frm.doc.work[idx].description = fix.suggested_value;
+                            }
                         }
                     }
                 });
@@ -490,12 +564,11 @@ function show_review_dialog(frm, fixes_data, from_submit) {
                     });
                 });
             } else {
-                // Button context: apply via server API and reload
                 frappe.call({
                     method: 'fieldservice.fieldservice.doctype.service_report.service_report.apply_review',
                     args: {
                         service_report: frm.doc.name,
-                        fixes: JSON.stringify(fixes)
+                        fixes: JSON.stringify(selected_fixes)
                     },
                     callback: function() {
                         frm.reload_doc();
@@ -507,13 +580,15 @@ function show_review_dialog(frm, fixes_data, from_submit) {
         secondary_action: function() {
             d.hide();
             if (from_submit) {
-                // Submit without corrections
                 frm.call('submit', { flags: { skip_review: true } }).then(() => {
                     frm.reload_doc();
                 });
             }
         }
     });
+
+    // Make dialog wider
+    d.$wrapper.find('.modal-dialog').css('max-width', '900px');
     d.show();
 }
 
