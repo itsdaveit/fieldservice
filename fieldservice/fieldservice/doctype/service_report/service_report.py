@@ -166,12 +166,21 @@ def apply_review(service_report, fixes):
 	import re
 	applied = 0
 	for fix in fixes:
-		m = re.match(r'work\[(\d+)\]\.description', fix.get('field', ''))
-		if m and fix.get('suggested_value'):
-			idx = int(m.group(1))
-			if idx < len(doc.work):
-				doc.work[idx].description = fix['suggested_value']
-				applied += 1
+		field = fix.get('field', '')
+		suggested = fix.get('suggested_value')
+		if not suggested:
+			continue
+
+		if field == 'titel':
+			doc.titel = suggested
+			applied += 1
+		else:
+			m = re.match(r'work\[(\d+)\]\.description', field)
+			if m:
+				idx = int(m.group(1))
+				if idx < len(doc.work):
+					doc.work[idx].description = suggested
+					applied += 1
 
 	if applied:
 		doc.flags.skip_validation = True
@@ -182,3 +191,41 @@ def apply_review(service_report, fixes):
 		)
 
 	return applied
+
+@frappe.whitelist()
+def run_llm_review(service_report):
+	"""Run LLM-based text correction on a Service Report."""
+	from fieldservice.review_pipeline import build_default_pipeline, LLMTextCorrectionStep
+
+	settings = frappe.get_single('Fieldservice Settings')
+	if not getattr(settings, 'enable_ai_review', False):
+		frappe.throw(_('KI-Review ist nicht aktiviert. Bitte in den Fieldservice Settings aktivieren.'))
+
+	api_key = settings.get_password('ai_api_key')
+	if not api_key:
+		frappe.throw(_('Kein Anthropic API Key hinterlegt. Bitte in den Fieldservice Settings eintragen.'))
+
+	doc = frappe.get_doc('Service Report', service_report)
+
+	# Run deterministic steps first and apply them
+	pipeline = build_default_pipeline(doc)
+	pipeline.run()
+	applied = pipeline.apply_auto_fixes()
+
+	# Save if deterministic fixes were applied
+	if applied:
+		doc.flags.skip_validation = True
+		doc.save()
+
+	# Run LLM step
+	model = getattr(settings, 'ai_model', None) or 'claude-sonnet-4-20250514'
+	system_prompt = getattr(settings, 'ai_system_prompt', None) or ''
+
+	step = LLMTextCorrectionStep(api_key, model, system_prompt)
+	results = step.execute(doc, pipeline.results)
+
+	if not results:
+		frappe.msgprint(_('Keine KI-Korrekturen nötig.'), indicator='green')
+		return []
+
+	return [r.to_dict() for r in results]

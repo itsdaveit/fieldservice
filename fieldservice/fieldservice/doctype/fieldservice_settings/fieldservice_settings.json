@@ -8,7 +8,12 @@
  "field_order": [
   "max_work_duration",
   "review_section",
-  "review_mode"
+  "review_mode",
+  "ai_review_section",
+  "enable_ai_review",
+  "ai_api_key",
+  "ai_model",
+  "ai_system_prompt"
  ],
  "fields": [
   {
@@ -30,6 +35,39 @@
    "options": "Off\nAuto-Apply\nConfirm",
    "default": "Off",
    "description": "Auto-Apply: Corrections applied automatically on submit. Confirm: User must approve corrections before submit. Off: No automatic corrections."
+  },
+  {
+   "fieldname": "ai_review_section",
+   "fieldtype": "Section Break",
+   "label": "KI-Textkorrektur"
+  },
+  {
+   "fieldname": "enable_ai_review",
+   "fieldtype": "Check",
+   "label": "KI-Review aktiviert",
+   "default": "0",
+   "description": "Aktiviert den Button KI-Textkorrektur im Service Report."
+  },
+  {
+   "fieldname": "ai_api_key",
+   "fieldtype": "Password",
+   "label": "Anthropic API Key",
+   "depends_on": "enable_ai_review"
+  },
+  {
+   "fieldname": "ai_model",
+   "fieldtype": "Data",
+   "label": "Modell",
+   "default": "claude-sonnet-4-20250514",
+   "depends_on": "enable_ai_review"
+  },
+  {
+   "fieldname": "ai_system_prompt",
+   "fieldtype": "Code",
+   "label": "System Prompt",
+   "options": "Plain Text",
+   "depends_on": "enable_ai_review",
+   "description": "Der System-Prompt fuer die KI-Textkorrektur. Wird bei jedem Aufruf an die KI gesendet."
   }
  ],
  "index_web_pages_for_search": 1,

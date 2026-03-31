@@ -236,6 +236,19 @@ frappe.ui.form.on('Service Report', {
                     }
                 });
             }, __("Aktionen"));
+
+            frm.add_custom_button(__('🤖 KI-Textkorrektur'), function() {
+                frappe.call({
+                    method: 'fieldservice.fieldservice.doctype.service_report.service_report.run_llm_review',
+                    args: { service_report: frm.doc.name },
+                    freeze: true,
+                    freeze_message: __('KI prüft Beschreibungen...'),
+                    callback: function(r) {
+                        if (!r.message || r.message.length === 0) return;
+                        show_review_dialog(frm, JSON.stringify(r.message));
+                    }
+                });
+            }, __("Aktionen"));
         }
 
         // Style Aktionen button like Sales Invoice (itsdave red)

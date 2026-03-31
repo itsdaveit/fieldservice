@@ -386,6 +386,302 @@ class CapitalizationStep(ReviewStep):
 
 
 # ---------------------------------------------------------------------------
+# Step 3: LLM Text Correction
+# ---------------------------------------------------------------------------
+
+DEFAULT_AI_SYSTEM_PROMPT = """\
+Du bist ein Qualitätsprüfer für Service-Reports eines IT-Dienstleisters (itsdave GmbH).
+
+Techniker erstellen Service Reports nach erledigter Arbeit. Diese werden in Lieferscheine überführt, die an Kunden gehen. Du prüfst und korrigierst die Texte, bevor sie den Kunden erreichen.
+
+## Deine Aufgaben
+
+### 1. Titel korrigieren
+- Korrekte Groß-/Kleinschreibung (deutsch)
+- Rechtschreibung
+- Beispiel: "SIP Trunk Easybell anpassung" → "SIP-Trunk Easybell Anpassung"
+- Beispiel: "Mobilteil einrichtung 3CX" → "Mobilteileinrichtung 3CX"
+
+### 2. Beschreibungstexte korrigieren
+- Grammatik und Rechtschreibung korrigieren (deutsch, außer englische Fachbegriffe)
+- Text kundengerecht formulieren (professionell, klar, technischen Inhalt beibehalten)
+- Abkürzungen beibehalten wenn branchenüblich (VPN, AD, DNS, DHCP, RDP, etc.)
+- KEINE inhaltlichen Änderungen oder Ergänzungen
+- Das Format ist <p>• Text</p> — behalte dieses Format exakt bei
+- Jeder Aufzählungspunkt bleibt ein eigener <p>• ...</p> Absatz
+
+### 3. Service-Typ bewerten
+Erkenne ob die Arbeit tatsächlich Remote oder Vor-Ort stattfand.
+Starke Vor-Ort-Indikatoren: "vor Ort", "VO", "Mitnahme", "mitgenommen", "aufgebaut", "ausgeliefert", "abgeholt", Verkabelung, Umzug, Einbau, "Serverraum"
+Starke Remote-Indikatoren: "TV Support" (TeamViewer), "Fernwartung", "TRMM", "Telefonat", reine Konfigurationsarbeiten
+
+## Wichtig
+- Behalte den technischen Inhalt exakt bei
+- Ändere keine Fakten, Zeitangaben oder Kundennamen
+- Wenn ein Text bereits korrekt ist, nimm ihn NICHT in die Korrekturen auf
+
+## Antwortformat
+Antworte NUR mit einem JSON-Objekt in exakt diesem Format (keine Markdown-Codeblocks):
+{
+  "titel_korrektur": {
+    "original": "Originaler Titel",
+    "korrigiert": "Korrigierter Titel",
+    "aenderungen": ["rechtschreibung"]
+  },
+  "korrekturen": [
+    {
+      "idx": 1,
+      "korrigierter_text": "<p>• Korrigierter Text</p><p>• Zweiter Punkt</p>",
+      "aenderungen": ["rechtschreibung", "grammatik"]
+    }
+  ],
+  "service_typ_bewertung": {
+    "aktueller_typ": "Remote Service",
+    "empfohlener_typ": "On-Site Service",
+    "konfidenz": "sicher",
+    "begruendung": "Kurze Begründung"
+  }
+}
+Regeln:
+- "korrekturen" enthält NUR Positionen die Korrekturen brauchen (leeres Array wenn alles korrekt)
+- "titel_korrektur.aenderungen" ist leer wenn der Titel korrekt ist
+- "idx" ist 1-basiert (Position 1 = idx 1)
+- "korrigierter_text" muss im <p>• Text</p> HTML-Format sein\
+"""
+
+LLM_RESPONSE_SCHEMA = {
+    "type": "object",
+    "required": ["titel_korrektur", "korrekturen", "service_typ_bewertung"],
+    "additionalProperties": False,
+    "properties": {
+        "titel_korrektur": {
+            "type": "object",
+            "required": ["original", "korrigiert", "aenderungen"],
+            "additionalProperties": False,
+            "properties": {
+                "original": {"type": "string"},
+                "korrigiert": {"type": "string"},
+                "aenderungen": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Liste der Änderungen, leer wenn keine nötig"
+                }
+            }
+        },
+        "korrekturen": {
+            "type": "array",
+            "description": "Nur Positionen die Korrekturen brauchen. Leer wenn alles korrekt.",
+            "items": {
+                "type": "object",
+                "required": ["idx", "korrigierter_text", "aenderungen"],
+                "additionalProperties": False,
+                "properties": {
+                    "idx": {
+                        "type": "integer",
+                        "description": "1-basierter Index der Arbeitsposition"
+                    },
+                    "korrigierter_text": {
+                        "type": "string",
+                        "description": "Korrigierter HTML-Text im <p>• Text</p> Format"
+                    },
+                    "aenderungen": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Art der Änderungen: rechtschreibung, grammatik, grossschreibung, formulierung"
+                    }
+                }
+            }
+        },
+        "service_typ_bewertung": {
+            "type": "object",
+            "required": ["aktueller_typ", "empfohlener_typ", "konfidenz", "begruendung"],
+            "additionalProperties": False,
+            "properties": {
+                "aktueller_typ": {
+                    "type": "string",
+                    "enum": ["Remote Service", "On-Site Service", "Application Development"]
+                },
+                "empfohlener_typ": {
+                    "type": "string",
+                    "enum": ["Remote Service", "On-Site Service", "Application Development"]
+                },
+                "konfidenz": {
+                    "type": "string",
+                    "enum": ["sicher", "wahrscheinlich", "unsicher"]
+                },
+                "begruendung": {"type": "string"}
+            }
+        }
+    }
+}
+
+
+def _strip_html(html: str) -> str:
+    """Strip HTML tags for plain-text display in prompts."""
+    text = re.sub(r'<[^>]+>', ' ', html or '')
+    text = text.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>')
+    text = text.replace('&nbsp;', ' ')
+    return re.sub(r'\s+', ' ', text).strip()
+
+
+class LLMTextCorrectionStep(ReviewStep):
+    """Call Claude API to correct spelling, grammar, and phrasing."""
+
+    name = "llm_text_correction"
+
+    def __init__(self, api_key: str, model: str, system_prompt: str):
+        self.api_key = api_key
+        self.model = model or "claude-sonnet-4-20250514"
+        self.system_prompt = system_prompt or DEFAULT_AI_SYSTEM_PROMPT
+
+    def execute(self, doc, previous_results: list[ReviewResult]) -> list[ReviewResult]:
+        import anthropic
+
+        # Build user prompt with all work descriptions
+        positions = []
+        for i, work in enumerate(doc.work):
+            desc = self._get_current_value(f"work[{i}].description", work.description, previous_results)
+            if desc:
+                plain = _strip_html(desc)
+                positions.append(f"**Position {i+1}** (Service-Typ: {getattr(work, 'service_type', 'unbekannt')}):\n{plain}")
+
+        if not positions:
+            return []
+
+        user_prompt = (
+            f"## Service Report\n\n"
+            f"**Titel:** {getattr(doc, 'titel', '') or ''}\n"
+            f"**Service-Typ (gewählt):** {getattr(doc, 'report_type', '') or ''}\n\n"
+            f"### Arbeitspositionen:\n\n" +
+            "\n\n".join(positions)
+        )
+
+        # Call Claude API with tool use to enforce JSON schema
+        client = anthropic.Anthropic(api_key=self.api_key)
+
+        tool_definition = {
+            "name": "submit_review",
+            "description": "Reiche das Ergebnis der Textprüfung ein.",
+            "input_schema": LLM_RESPONSE_SCHEMA,
+        }
+
+        message = client.messages.create(
+            model=self.model,
+            max_tokens=4096,
+            system=self.system_prompt,
+            messages=[{"role": "user", "content": user_prompt}],
+            tools=[tool_definition],
+            tool_choice={"type": "tool", "name": "submit_review"},
+        )
+
+        # Extract structured data from tool use response
+        data = None
+        for block in message.content:
+            if block.type == "tool_use" and block.name == "submit_review":
+                data = block.input
+                break
+
+        if not data or not isinstance(data, dict):
+            return []
+
+        return self._parse_response(data, doc, previous_results)
+
+    def _parse_response(self, data: dict, doc, previous_results: list[ReviewResult]) -> list[ReviewResult]:
+        """Parse LLM response flexibly — handles various JSON structures."""
+        results = []
+
+        # --- Title correction ---
+        # Handles: titel_korrektur.korrigiert, titel.korrigiert
+        titel_korr = data.get("titel_korrektur") or data.get("titel") or {}
+        if isinstance(titel_korr, dict):
+            original = titel_korr.get("original", "")
+            korrigiert = titel_korr.get("korrigiert", "")
+            needs_fix = titel_korr.get("aenderungen") or titel_korr.get("benoetigt_korrektur")
+            if needs_fix and korrigiert and korrigiert != original:
+                aenderungen = titel_korr.get("aenderungen", [])
+                msg = "Titel: " + (", ".join(aenderungen) if isinstance(aenderungen, list) and aenderungen else "korrigiert")
+                results.append(ReviewResult(
+                    step_name=self.name, field="titel",
+                    original_value=original, suggested_value=korrigiert,
+                    change_type="suggestion", message=msg,
+                ))
+
+        # --- Work description corrections ---
+        # Handles: korrekturen[].korrigierter_text or positionen[].beschreibung.korrigiert
+        corrections = data.get("korrekturen") or data.get("positionen") or []
+        if not isinstance(corrections, list):
+            corrections = []
+
+        for korr in corrections:
+            if not isinstance(korr, dict):
+                continue
+
+            # Get position index (1-based in various field names)
+            idx = (korr.get("idx") or korr.get("position") or 0) - 1
+            if idx < 0 or idx >= len(doc.work):
+                continue
+
+            # Get suggested text — various structures
+            suggested = korr.get("korrigierter_text", "")
+            if not suggested:
+                beschreibung = korr.get("beschreibung")
+                if isinstance(beschreibung, dict):
+                    suggested = beschreibung.get("korrigiert", "")
+
+            if not suggested:
+                continue
+
+            field_key = f"work[{idx}].description"
+            current = self._get_current_value(field_key, doc.work[idx].description, previous_results)
+
+            if suggested != current:
+                aenderungen = korr.get("aenderungen", [])
+                if not aenderungen and isinstance(korr.get("beschreibung"), dict):
+                    if korr["beschreibung"].get("benoetigt_korrektur"):
+                        aenderungen = ["textkorrektur"]
+                msg_parts = aenderungen if isinstance(aenderungen, list) and aenderungen else ["korrigiert"]
+                results.append(ReviewResult(
+                    step_name=self.name, field=field_key,
+                    original_value=current, suggested_value=suggested,
+                    change_type="suggestion",
+                    message=f"Position {idx+1}: " + ", ".join(msg_parts),
+                ))
+
+            # Service type per position
+            svc = korr.get("service_typ")
+            if isinstance(svc, dict) and svc.get("benoetigt_aenderung"):
+                results.append(ReviewResult(
+                    step_name=self.name, field="report_type",
+                    original_value=svc.get("original", ""),
+                    suggested_value=svc.get("empfohlen", ""),
+                    change_type="warning",
+                    message=f"Position {idx+1} Service-Typ: {svc.get('begruendung', '')}",
+                ))
+
+        # --- Global service type warning ---
+        typ_bew = data.get("service_typ_bewertung") or {}
+        if (isinstance(typ_bew, dict) and typ_bew.get("empfohlener_typ") and
+                typ_bew.get("empfohlener_typ") != typ_bew.get("aktueller_typ") and
+                typ_bew.get("konfidenz") in ("sicher", "wahrscheinlich")):
+            results.append(ReviewResult(
+                step_name=self.name, field="report_type",
+                original_value=typ_bew.get("aktueller_typ", ""),
+                suggested_value=typ_bew.get("empfohlener_typ", ""),
+                change_type="warning",
+                message=f"Service-Typ: {typ_bew.get('begruendung', '')}",
+            ))
+
+        return results
+
+    def _get_current_value(self, field_key: str, original: str,
+                           previous_results: list[ReviewResult]) -> str:
+        for result in reversed(previous_results):
+            if result.field == field_key and result.suggested_value:
+                return result.suggested_value
+        return original
+
+
+# ---------------------------------------------------------------------------
 # Pipeline builder
 # ---------------------------------------------------------------------------
 
