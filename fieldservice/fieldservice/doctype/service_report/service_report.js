@@ -402,14 +402,17 @@ function show_review_dialog(frm, fixes_data, from_submit) {
     // Convert Quill bullet HTML to readable preview HTML
     function quill_to_preview(html) {
         if (!html) return '';
-        // Replace <li data-list="bullet"><span ...></span>TEXT</li> with bullet lines
         let preview = html
-            .replace(/<ol>/g, '')
-            .replace(/<\/ol>/g, '')
+            // Remove ql-editor wrapper
+            .replace(/<div class="ql-editor[^"]*">/g, '')
+            // Remove ol/ul wrappers
+            .replace(/<\/?ol>/g, '')
+            .replace(/<\/?ul>/g, '')
+            // Replace bullet list items with simple bullet divs
             .replace(/<li data-list="bullet"><span[^>]*><\/span>\s*/g, '<div style="margin-bottom:2px;">\u2022 ')
-            .replace(/<\/li>/g, '</div>');
-        // Clean up ql-editor wrapper if present
-        preview = preview.replace(/<div class="ql-editor[^"]*">/g, '').replace(/<\/div>\s*$/g, '');
+            .replace(/<\/li>/g, '</div>')
+            // Remove trailing wrapper divs
+            .replace(/<\/div>\s*$/g, '');
         return preview;
     }
 
@@ -422,7 +425,7 @@ function show_review_dialog(frm, fixes_data, from_submit) {
         body += '<strong>' + pos_label + '</strong> &mdash; ' + fix.message + '<br>';
         body += '<div style="margin-top: 8px;">';
         body += '<div style="margin-bottom: 5px;"><span class="text-muted">Vorher:</span></div>';
-        body += '<div style="padding: 8px 12px; background: var(--bg-light-gray, #f5f5f5); border-radius: 4px; margin-bottom: 8px; max-height: 300px; overflow-y: auto;">' + fix.original_value + '</div>';
+        body += '<div style="padding: 8px 12px; background: var(--bg-light-gray, #f5f5f5); border-radius: 4px; margin-bottom: 8px; max-height: 300px; overflow-y: auto;">' + quill_to_preview(fix.original_value) + '</div>';
         body += '<div style="margin-bottom: 5px;"><span class="text-muted">Nachher:</span></div>';
         body += '<div style="padding: 8px 12px; background: #e8f5e9; border-radius: 4px; margin-bottom: 8px; max-height: 300px; overflow-y: auto;">' + quill_to_preview(fix.suggested_value) + '</div>';
         body += '</div></div>';
