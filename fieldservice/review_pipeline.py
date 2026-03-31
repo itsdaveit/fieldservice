@@ -627,7 +627,7 @@ class LLMTextCorrectionStep(ReviewStep):
         )
 
         # Call Claude API with tool use to enforce JSON schema
-        client = anthropic.Anthropic(api_key=self.api_key)
+        client = anthropic.Anthropic(api_key=self.api_key, timeout=90.0)
 
         tool_definition = {
             "name": "submit_review",
@@ -635,14 +635,21 @@ class LLMTextCorrectionStep(ReviewStep):
             "input_schema": LLM_RESPONSE_SCHEMA,
         }
 
-        message = client.messages.create(
-            model=self.model,
-            max_tokens=4096,
-            system=self.system_prompt,
-            messages=[{"role": "user", "content": user_prompt}],
-            tools=[tool_definition],
-            tool_choice={"type": "tool", "name": "submit_review"},
-        )
+        try:
+            message = client.messages.create(
+                model=self.model,
+                max_tokens=4096,
+                system=self.system_prompt,
+                messages=[{"role": "user", "content": user_prompt}],
+                tools=[tool_definition],
+                tool_choice={"type": "tool", "name": "submit_review"},
+            )
+        except anthropic.APITimeoutError:
+            raise Exception("Die KI-Anfrage hat zu lange gedauert. Bitte versuche es erneut — bei umfangreichen Service Reports kann die Verarbeitung etwas länger dauern.")
+        except anthropic.APIConnectionError:
+            raise Exception("Verbindung zur KI konnte nicht hergestellt werden. Bitte prüfe die Internetverbindung und versuche es erneut.")
+        except anthropic.APIStatusError as e:
+            raise Exception(f"KI-Fehler: {e.message}")
 
         # Extract structured data from tool use response
         data = None

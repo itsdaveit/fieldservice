@@ -247,8 +247,24 @@ frappe.ui.form.on('Service Report', {
                         if (!r.message || r.message.length === 0) return;
                         show_review_dialog(frm, JSON.stringify(r.message));
                     },
-                    error: function() {
+                    error: function(r) {
                         hide_ai_loading();
+                        // Extract error message from server response
+                        let msg = 'Ein unbekannter Fehler ist aufgetreten.';
+                        try {
+                            if (r && r._server_messages) {
+                                let msgs = JSON.parse(r._server_messages);
+                                let parsed = JSON.parse(msgs[0]);
+                                msg = parsed.message || msg;
+                            } else if (r && r.responseText) {
+                                msg = 'Zeitüberschreitung — der Service Report hat sehr viele Positionen. Bitte versuche es erneut.';
+                            }
+                        } catch(e) {}
+                        frappe.msgprint({
+                            title: __('KI-Textkorrektur fehlgeschlagen'),
+                            message: msg,
+                            indicator: 'orange'
+                        });
                     }
                 });
             }, __("Aktionen"));
