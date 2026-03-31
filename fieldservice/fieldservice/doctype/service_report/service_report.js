@@ -597,7 +597,8 @@ function show_review_dialog(frm, fixes_data, from_submit) {
             body += '<div style="padding:10px 14px;background:#fafafa;border-radius:4px;line-height:1.6;margin-bottom:6px;">'+diff_html(fix.original_value, fix.suggested_value)+'</div>';
             // Editable text field for custom formulation
             body += '<details style="margin-top:4px;"><summary style="cursor:pointer;font-size:12px;color:var(--text-muted);">Eigene Formulierung eingeben</summary>';
-            body += '<textarea data-custom-text-index="'+fix._index+'" style="width:100%;min-height:60px;margin-top:6px;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:13px;font-family:inherit;" placeholder="Eigenen Text eingeben (überschreibt den KI-Vorschlag)..."></textarea>';
+            let prefill = strip_html(fix.suggested_value).replace(/ \u2022 /g, '\n\u2022 ');
+            body += '<textarea data-custom-text-index="'+fix._index+'" data-original-prefill="'+encodeURIComponent(prefill)+'" style="width:100%;min-height:60px;margin-top:6px;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:13px;font-family:inherit;">'+prefill+'</textarea>';
             body += '</details>';
         }
 
@@ -634,16 +635,20 @@ function show_review_dialog(frm, fixes_data, from_submit) {
                 let cb = d.$wrapper.find('input[data-fix-index="'+index+'"]');
                 if (!cb.length || !cb.is(':checked')) return;
 
-                // Check for custom text override
+                // Check for custom text override (only if user changed it)
                 let custom_ta = d.$wrapper.find('textarea[data-custom-text-index="'+index+'"]');
-                if (custom_ta.length && custom_ta.val().trim()) {
-                    // Convert custom text to <p>• lines
-                    let lines = custom_ta.val().trim().split('\n').filter(l => l.trim());
-                    let html = lines.map(l => {
-                        l = l.trim().replace(/^[\u2022\-]\s*/, '');
-                        return '<p>\u2022 ' + l + '</p>';
-                    }).join('');
-                    fix = Object.assign({}, fix, {suggested_value: html});
+                if (custom_ta.length) {
+                    let current_val = custom_ta.val().trim();
+                    let original_prefill = decodeURIComponent(custom_ta.attr('data-original-prefill') || '');
+                    if (current_val && current_val !== original_prefill.trim()) {
+                        // User edited the text — convert to <p>• lines
+                        let lines = current_val.split('\n').filter(l => l.trim());
+                        let html = lines.map(l => {
+                            l = l.trim().replace(/^[\u2022\-]\s*/, '');
+                            return '<p>\u2022 ' + l + '</p>';
+                        }).join('');
+                        fix = Object.assign({}, fix, {suggested_value: html});
+                    }
                 }
                 selected_fixes.push(fix);
             });
