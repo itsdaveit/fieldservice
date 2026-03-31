@@ -399,7 +399,18 @@ function show_review_dialog(frm, fixes_data, from_submit) {
         return;
     }
 
-    let body = '<div class="review-results">';
+    // Quill bullet list CSS for dialog preview
+    let style = '<style>'
+        + '.review-results ol { list-style: none; padding-left: 1.5em; margin: 0; }'
+        + '.review-results li { list-style-type: none; padding-left: 1.5em; position: relative; }'
+        + '.review-results li[data-list="bullet"] > .ql-ui { display: none; }'
+        + '.review-results li[data-list="bullet"]::before { content: "\\2022"; position: absolute; left: 0; }'
+        + '.review-preview { padding: 8px 12px; border-radius: 4px; margin-bottom: 8px; max-height: 300px; overflow-y: auto; }'
+        + '.review-preview-before { background: var(--bg-light-gray, #f5f5f5); }'
+        + '.review-preview-after { background: #e8f5e9; }'
+        + '</style>';
+
+    let body = style + '<div class="review-results">';
     fixes.forEach(function(fix) {
         let field_match = fix.field.match(/work\[(\d+)\]/);
         let pos_label = field_match ? 'Position ' + (parseInt(field_match[1]) + 1) : fix.field;
@@ -408,9 +419,9 @@ function show_review_dialog(frm, fixes_data, from_submit) {
         body += '<strong>' + pos_label + '</strong> &mdash; ' + fix.message + '<br>';
         body += '<div style="margin-top: 8px;">';
         body += '<div style="margin-bottom: 5px;"><span class="text-muted">Vorher:</span></div>';
-        body += '<div style="padding: 5px; background: var(--bg-light-gray); border-radius: 3px; margin-bottom: 8px;">' + fix.original_value + '</div>';
+        body += '<div class="review-preview review-preview-before">' + fix.original_value + '</div>';
         body += '<div style="margin-bottom: 5px;"><span class="text-muted">Nachher:</span></div>';
-        body += '<div style="padding: 5px; background: #e8f5e9; border-radius: 3px;">' + fix.suggested_value + '</div>';
+        body += '<div class="review-preview review-preview-after">' + fix.suggested_value + '</div>';
         body += '</div></div>';
     });
     body += '</div>';
