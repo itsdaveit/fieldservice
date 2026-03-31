@@ -399,29 +399,32 @@ function show_review_dialog(frm, fixes_data, from_submit) {
         return;
     }
 
-    // Quill bullet list CSS for dialog preview
-    let style = '<style>'
-        + '.review-results ol { list-style: none; padding-left: 1.5em; margin: 0; }'
-        + '.review-results li { list-style-type: none; padding-left: 1.5em; position: relative; }'
-        + '.review-results li[data-list="bullet"] > .ql-ui { display: none; }'
-        + '.review-results li[data-list="bullet"]::before { content: "\\2022"; position: absolute; left: 0; }'
-        + '.review-preview { padding: 8px 12px; border-radius: 4px; margin-bottom: 8px; max-height: 300px; overflow-y: auto; }'
-        + '.review-preview-before { background: var(--bg-light-gray, #f5f5f5); }'
-        + '.review-preview-after { background: #e8f5e9; }'
-        + '</style>';
+    // Convert Quill bullet HTML to readable preview HTML
+    function quill_to_preview(html) {
+        if (!html) return '';
+        // Replace <li data-list="bullet"><span ...></span>TEXT</li> with bullet lines
+        let preview = html
+            .replace(/<ol>/g, '')
+            .replace(/<\/ol>/g, '')
+            .replace(/<li data-list="bullet"><span[^>]*><\/span>\s*/g, '<div style="padding-left:1.2em;text-indent:-1.2em;margin-bottom:2px;">\u2022 ')
+            .replace(/<\/li>/g, '</div>');
+        // Clean up ql-editor wrapper if present
+        preview = preview.replace(/<div class="ql-editor[^"]*">/g, '').replace(/<\/div>\s*$/g, '');
+        return preview;
+    }
 
-    let body = style + '<div class="review-results">';
+    let body = '<div class="review-results">';
     fixes.forEach(function(fix) {
         let field_match = fix.field.match(/work\[(\d+)\]/);
         let pos_label = field_match ? 'Position ' + (parseInt(field_match[1]) + 1) : fix.field;
 
-        body += '<div class="review-item" style="margin-bottom: 15px; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px;">';
+        body += '<div style="margin-bottom: 15px; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px;">';
         body += '<strong>' + pos_label + '</strong> &mdash; ' + fix.message + '<br>';
         body += '<div style="margin-top: 8px;">';
         body += '<div style="margin-bottom: 5px;"><span class="text-muted">Vorher:</span></div>';
-        body += '<div class="review-preview review-preview-before">' + fix.original_value + '</div>';
+        body += '<div style="padding: 8px 12px; background: var(--bg-light-gray, #f5f5f5); border-radius: 4px; margin-bottom: 8px; max-height: 300px; overflow-y: auto;">' + fix.original_value + '</div>';
         body += '<div style="margin-bottom: 5px;"><span class="text-muted">Nachher:</span></div>';
-        body += '<div class="review-preview review-preview-after">' + fix.suggested_value + '</div>';
+        body += '<div style="padding: 8px 12px; background: #e8f5e9; border-radius: 4px; margin-bottom: 8px; max-height: 300px; overflow-y: auto;">' + quill_to_preview(fix.suggested_value) + '</div>';
         body += '</div></div>';
     });
     body += '</div>';
