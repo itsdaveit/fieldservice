@@ -472,23 +472,59 @@ function show_review_dialog(frm, fixes_data, from_submit) {
             .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim();
     }
 
-    function diff_html(original_html, suggested_html) {
-        let orig = strip_html(original_html).split(/\s+/);
-        let sugg = strip_html(suggested_html).split(/\s+/);
-        let m = orig.length, n = sugg.length;
+    // Word-level diff for a single line
+    function diff_words(orig_words, sugg_words) {
+        let m = orig_words.length, n = sugg_words.length;
         let dp = Array.from({length: m+1}, () => Array(n+1).fill(0));
         for (let i=1; i<=m; i++) for (let j=1; j<=n; j++)
-            dp[i][j] = orig[i-1]===sugg[j-1] ? dp[i-1][j-1]+1 : Math.max(dp[i-1][j], dp[i][j-1]);
+            dp[i][j] = orig_words[i-1]===sugg_words[j-1] ? dp[i-1][j-1]+1 : Math.max(dp[i-1][j], dp[i][j-1]);
         let result = [], i=m, j=n;
         while (i>0||j>0) {
-            if (i>0&&j>0&&orig[i-1]===sugg[j-1]) { result.unshift({t:'eq',w:orig[i-1]}); i--;j--; }
-            else if (j>0&&(i===0||dp[i][j-1]>=dp[i-1][j])) { result.unshift({t:'add',w:sugg[j-1]}); j--; }
-            else { result.unshift({t:'del',w:orig[i-1]}); i--; }
+            if (i>0&&j>0&&orig_words[i-1]===sugg_words[j-1]) { result.unshift({t:'eq',w:orig_words[i-1]}); i--;j--; }
+            else if (j>0&&(i===0||dp[i][j-1]>=dp[i-1][j])) { result.unshift({t:'add',w:sugg_words[j-1]}); j--; }
+            else { result.unshift({t:'del',w:orig_words[i-1]}); i--; }
         }
         return result.map(r =>
             r.t==='del' ? '<span style="background:#ffcdd2;text-decoration:line-through;padding:1px 2px;border-radius:2px;">'+r.w+'</span>' :
             r.t==='add' ? '<span style="background:#c8e6c9;padding:1px 2px;border-radius:2px;font-weight:500;">'+r.w+'</span>' : r.w
         ).join(' ');
+    }
+
+    // Extract bullet lines from HTML (<p>• text</p> or <li> or plain text)
+    function extract_lines(html) {
+        if (!html) return [];
+        // Split on <p> tags
+        let parts = html.split(/<\/?p>/).map(s => s.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim()).filter(s => s);
+        if (parts.length > 1) return parts;
+        // Split on <li> tags
+        parts = html.split(/<\/?li[^>]*>/).map(s => s.replace(/<[^>]+>/g, '').trim()).filter(s => s);
+        if (parts.length > 1) return parts;
+        // Single line
+        return [strip_html(html)];
+    }
+
+    // Line-by-line diff with word-level highlighting
+    function diff_html(original_html, suggested_html) {
+        let orig_lines = extract_lines(original_html);
+        let sugg_lines = extract_lines(suggested_html);
+
+        // Match lines by index (bullet lists have same structure)
+        let max_len = Math.max(orig_lines.length, sugg_lines.length);
+        let output = [];
+        for (let i = 0; i < max_len; i++) {
+            let ol = (i < orig_lines.length) ? orig_lines[i] : '';
+            let sl = (i < sugg_lines.length) ? sugg_lines[i] : '';
+            if (ol === sl) {
+                output.push('<div style="margin-bottom:3px;">' + sl + '</div>');
+            } else if (!ol) {
+                output.push('<div style="margin-bottom:3px;"><span style="background:#c8e6c9;padding:1px 2px;border-radius:2px;font-weight:500;">' + sl + '</span></div>');
+            } else if (!sl) {
+                output.push('<div style="margin-bottom:3px;"><span style="background:#ffcdd2;text-decoration:line-through;padding:1px 2px;border-radius:2px;">' + ol + '</span></div>');
+            } else {
+                output.push('<div style="margin-bottom:3px;">' + diff_words(ol.split(/\s+/), sl.split(/\s+/)) + '</div>');
+            }
+        }
+        return output.join('');
     }
 
     function format_date(dt) {
