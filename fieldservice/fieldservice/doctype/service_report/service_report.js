@@ -528,7 +528,7 @@ function show_review_dialog(frm, fixes_data, from_submit) {
     let standalone = [];  // fixes that don't belong to a position group
 
     fixes.forEach(function(fix, index) {
-        fix._index = index;  // preserve original index for checkbox data attr
+        fix._index = index;
         let m = fix.field.match(/^work\[(\d+)\]/);
         if (m) {
             let key = 'work[' + m[1] + ']';
@@ -537,6 +537,22 @@ function show_review_dialog(frm, fixes_data, from_submit) {
                 grouped[key].svc = fix;
             } else {
                 grouped[key].desc = fix;
+            }
+        } else if (fix.field === 'report_type') {
+            // Global service type — attach to first position that has a description fix
+            let attached = false;
+            for (let key of Object.keys(grouped)) {
+                if (grouped[key].desc && !grouped[key].svc) {
+                    grouped[key].svc = fix;
+                    attached = true;
+                    break;
+                }
+            }
+            if (!attached) {
+                // Attach to first position key or create work[0]
+                let first_key = Object.keys(grouped)[0] || 'work[0]';
+                if (!grouped[first_key]) grouped[first_key] = {};
+                grouped[first_key].svc = fix;
             }
         } else {
             standalone.push(fix);
