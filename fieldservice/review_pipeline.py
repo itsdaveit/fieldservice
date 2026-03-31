@@ -267,10 +267,10 @@ class BulletFormattingStep(ReviewStep):
                 continue
 
             if is_indented_sub_item(raw_p):
-                # Indented sub-item: strip all leading whitespace and dash
+                # Indented sub-item: strip all leading whitespace and dash, no extra indent
                 text = raw_p.replace('&nbsp;', ' ').strip()
                 text = strip_dash(text)
-                non_empty.append({'text': '  ' + text, 'type': 'sub_bullet', 'raw': raw_p})
+                non_empty.append({'text': text, 'type': 'sub_bullet', 'raw': raw_p})
             elif is_dash_bullet(cleaned):
                 text = strip_dash(cleaned)
                 non_empty.append({'text': text, 'type': 'bullet', 'raw': raw_p})
