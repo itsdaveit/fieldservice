@@ -340,7 +340,7 @@ def insert_surchargs_in_delivery_note(service_report):
             item.idx = count
             price = item.rate
             
-            if item.agains_service_report and item.ignore_surcharges == 0:
+            if item.agains_service_report and item.ignore_surcharges == 0 and item.service_report_item_begin:
                 surcharges_timeline = get_surcharges_timeline(surcharges_fur_current_surcharge_Determination, item)[0]
                 sorted_work_time_line = add_work_data_to_timeline(surcharges_timeline, item)
                 start_surcharge = get_start_surcharge(surcharges_timeline, item)
