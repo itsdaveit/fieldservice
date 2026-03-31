@@ -466,66 +466,57 @@ function show_review_dialog(frm, fixes_data, from_submit) {
         return;
     }
 
-    // Strip HTML tags for plain text comparison
+    // --- Helpers ---
     function strip_html(html) {
         return (html || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
             .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim();
     }
 
-    // Word-level diff with highlighting
     function diff_html(original_html, suggested_html) {
-        let orig = strip_html(original_html);
-        let sugg = strip_html(suggested_html);
-        let orig_words = orig.split(/\s+/);
-        let sugg_words = sugg.split(/\s+/);
-
-        // Simple LCS-based word diff
-        let m = orig_words.length, n = sugg_words.length;
-        let dp = Array.from({length: m + 1}, () => Array(n + 1).fill(0));
-        for (let i = 1; i <= m; i++)
-            for (let j = 1; j <= n; j++)
-                dp[i][j] = orig_words[i-1] === sugg_words[j-1]
-                    ? dp[i-1][j-1] + 1
-                    : Math.max(dp[i-1][j], dp[i][j-1]);
-
-        // Backtrack to build diff
-        let result = [];
-        let i = m, j = n;
-        while (i > 0 || j > 0) {
-            if (i > 0 && j > 0 && orig_words[i-1] === sugg_words[j-1]) {
-                result.unshift({type: 'equal', text: orig_words[i-1]});
-                i--; j--;
-            } else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) {
-                result.unshift({type: 'add', text: sugg_words[j-1]});
-                j--;
-            } else {
-                result.unshift({type: 'del', text: orig_words[i-1]});
-                i--;
-            }
+        let orig = strip_html(original_html).split(/\s+/);
+        let sugg = strip_html(suggested_html).split(/\s+/);
+        let m = orig.length, n = sugg.length;
+        let dp = Array.from({length: m+1}, () => Array(n+1).fill(0));
+        for (let i=1; i<=m; i++) for (let j=1; j<=n; j++)
+            dp[i][j] = orig[i-1]===sugg[j-1] ? dp[i-1][j-1]+1 : Math.max(dp[i-1][j], dp[i][j-1]);
+        let result = [], i=m, j=n;
+        while (i>0||j>0) {
+            if (i>0&&j>0&&orig[i-1]===sugg[j-1]) { result.unshift({t:'eq',w:orig[i-1]}); i--;j--; }
+            else if (j>0&&(i===0||dp[i][j-1]>=dp[i-1][j])) { result.unshift({t:'add',w:sugg[j-1]}); j--; }
+            else { result.unshift({t:'del',w:orig[i-1]}); i--; }
         }
-
-        return result.map(function(w) {
-            if (w.type === 'del') return '<span style="background:#ffcdd2;text-decoration:line-through;padding:1px 2px;border-radius:2px;">' + w.text + '</span>';
-            if (w.type === 'add') return '<span style="background:#c8e6c9;padding:1px 2px;border-radius:2px;font-weight:500;">' + w.text + '</span>';
-            return w.text;
-        }).join(' ');
+        return result.map(r =>
+            r.t==='del' ? '<span style="background:#ffcdd2;text-decoration:line-through;padding:1px 2px;border-radius:2px;">'+r.w+'</span>' :
+            r.t==='add' ? '<span style="background:#c8e6c9;padding:1px 2px;border-radius:2px;font-weight:500;">'+r.w+'</span>' : r.w
+        ).join(' ');
     }
 
-    // Convert Quill bullet HTML to readable preview
-    function quill_to_preview(html) {
-        if (!html) return '';
-        return html
-            .replace(/<div class="ql-editor[^"]*">/g, '')
-            .replace(/<\/?ol>/g, '').replace(/<\/?ul>/g, '')
-            .replace(/<li data-list="bullet"><span[^>]*><\/span>\s*/g, '<div style="margin-bottom:2px;">\u2022 ')
-            .replace(/<\/li>/g, '</div>')
-            .replace(/<\/div>\s*$/g, '');
+    function format_date(dt) {
+        if (!dt) return '';
+        let d = new Date(dt);
+        return d.toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit',year:'numeric'})
+            + ' ' + d.toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'});
     }
 
-    // Group fixes by position — service_type changes belong with their position's card
-    // Build a map: work[idx] -> {description fix, service_type fix}
-    let grouped = {};  // key: "titel" or "work[0]" etc, value: {desc: fix, svc: fix}
-    let standalone = [];  // fixes that don't belong to a position group
+    function svc_type_badge(svc_type) {
+        let colors = {
+            'Remote Service': {bg:'#e3f2fd',color:'#1565c0'},
+            'On-Site Service': {bg:'#fce4ec',color:'#c62828'},
+            'Application Development': {bg:'#f3e5f5',color:'#6a1b9a'}
+        };
+        let c = colors[svc_type] || {bg:'#f5f5f5',color:'#333'};
+        return '<span style="background:'+c.bg+';color:'+c.color+';padding:2px 8px;border-radius:10px;font-size:11px;white-space:nowrap;">'+svc_type+'</span>';
+    }
+
+    function get_work_meta(idx) {
+        if (idx < 0 || idx >= frm.doc.work.length) return null;
+        let w = frm.doc.work[idx];
+        return { begin: w.begin, end: w.end, hours: w.hours, service_type: w.service_type };
+    }
+
+    // --- Group fixes by position ---
+    let grouped = {};
+    let standalone = [];
 
     fixes.forEach(function(fix, index) {
         fix._index = index;
@@ -533,85 +524,93 @@ function show_review_dialog(frm, fixes_data, from_submit) {
         if (m) {
             let key = 'work[' + m[1] + ']';
             if (!grouped[key]) grouped[key] = {};
-            if (fix.field.endsWith('.service_type')) {
-                grouped[key].svc = fix;
-            } else {
-                grouped[key].desc = fix;
-            }
+            if (fix.field.endsWith('.service_type')) grouped[key].svc = fix;
+            else grouped[key].desc = fix;
         } else if (fix.field === 'report_type') {
-            // Global service type — attach to first position that has a description fix
-            let attached = false;
-            for (let key of Object.keys(grouped)) {
-                if (grouped[key].desc && !grouped[key].svc) {
-                    grouped[key].svc = fix;
-                    attached = true;
-                    break;
-                }
-            }
-            if (!attached) {
-                // Attach to first position key or create work[0]
-                let first_key = Object.keys(grouped)[0] || 'work[0]';
-                if (!grouped[first_key]) grouped[first_key] = {};
-                grouped[first_key].svc = fix;
-            }
+            // Global service type — show as standalone with special handling
+            standalone.push(fix);
         } else {
             standalone.push(fix);
         }
     });
 
-    // Build dialog body
+    // --- Build dialog body ---
     let body = '<div class="review-results" style="font-size:13px;">';
 
     // Standalone fixes (titel, global report_type)
     standalone.forEach(function(fix) {
-        let label = fix.field === 'titel' ? 'Titel' : fix.field;
-        let badge = '<span style="background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:8px;">Korrektur</span>';
+        let label = fix.field === 'titel' ? 'Titel' : (fix.field === 'report_type' ? 'Service-Typ (gesamter Report)' : fix.field);
+        let is_svc = fix.field === 'report_type';
+        let badge_html = is_svc
+            ? '<span style="background:#fff3e0;color:#e65100;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:8px;">Service-Typ</span>'
+            : '<span style="background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:8px;">Korrektur</span>';
+        let border = is_svc ? '#ff9800' : 'var(--border-color)';
 
-        body += '<div style="margin-bottom:12px;padding:12px;border:1px solid var(--border-color);border-radius:6px;background:#fff;">';
+        body += '<div style="margin-bottom:12px;padding:12px;border:1px solid '+border+';border-radius:6px;background:#fff;">';
         body += '<div style="display:flex;align-items:center;margin-bottom:8px;">';
-        body += '<input type="checkbox" checked data-fix-index="' + fix._index + '" style="width:18px;height:18px;margin-right:10px;cursor:pointer;accent-color:#e73249;">';
-        body += '<strong>' + label + '</strong>' + badge;
-        body += '<span style="color:var(--text-muted);margin-left:auto;font-size:12px;">' + fix.message + '</span>';
+        body += '<input type="checkbox" checked data-fix-index="'+fix._index+'" style="width:18px;height:18px;margin-right:10px;cursor:pointer;accent-color:'+(is_svc?'#ff9800':'#e73249')+'">';
+        body += '<strong>'+label+'</strong>'+badge_html;
+        body += '<span style="color:var(--text-muted);margin-left:auto;font-size:12px;">'+fix.message+'</span>';
         body += '</div>';
-        body += '<div style="padding:10px 14px;background:#fafafa;border-radius:4px;line-height:1.6;">' + diff_html(fix.original_value, fix.suggested_value) + '</div>';
+
+        if (is_svc) {
+            body += '<div style="padding:8px 12px;background:#fff3e0;border-radius:4px;">';
+            body += svc_type_badge(fix.original_value) + ' <span style="margin:0 6px;">\u2192</span> ' + svc_type_badge(fix.suggested_value);
+            body += '</div>';
+        } else {
+            body += '<div style="padding:10px 14px;background:#fafafa;border-radius:4px;line-height:1.6;">'+diff_html(fix.original_value, fix.suggested_value)+'</div>';
+        }
         body += '</div>';
     });
 
-    // Grouped position fixes (description + optional service_type in same card)
+    // Grouped position fixes
     Object.keys(grouped).sort().forEach(function(key) {
         let group = grouped[key];
         let m = key.match(/work\[(\d+)\]/);
-        let pos_num = parseInt(m[1]) + 1;
+        let pos_idx = parseInt(m[1]);
+        let pos_num = pos_idx + 1;
+        let meta = get_work_meta(pos_idx);
         let has_svc = !!group.svc;
         let has_desc = !!group.desc;
         let border = has_svc ? '#ff9800' : 'var(--border-color)';
 
-        body += '<div style="margin-bottom:12px;padding:12px;border:1px solid ' + border + ';border-radius:6px;background:#fff;">';
+        body += '<div style="margin-bottom:12px;padding:12px;border:1px solid '+border+';border-radius:6px;background:#fff;">';
+
+        // Position header with metadata
+        body += '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #eee;">';
+        body += '<strong style="font-size:14px;">Position '+pos_num+'</strong>';
+        if (meta) {
+            body += svc_type_badge(meta.service_type);
+            body += '<span style="color:var(--text-muted);font-size:12px;">'+format_date(meta.begin)+' \u2013 '+format_date(meta.end)+'</span>';
+            body += '<span style="color:var(--text-muted);font-size:12px;font-weight:600;">'+meta.hours+' Std.</span>';
+        }
+        body += '</div>';
 
         // Description correction
         if (has_desc) {
             let fix = group.desc;
-            let badge = '<span style="background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:8px;">Korrektur</span>';
-            body += '<div style="display:flex;align-items:center;margin-bottom:8px;">';
-            body += '<input type="checkbox" checked data-fix-index="' + fix._index + '" style="width:18px;height:18px;margin-right:10px;cursor:pointer;accent-color:#e73249;">';
-            body += '<strong>Position ' + pos_num + '</strong>' + badge;
-            body += '<span style="color:var(--text-muted);margin-left:auto;font-size:12px;">' + fix.message + '</span>';
+            body += '<div style="display:flex;align-items:center;margin-bottom:6px;">';
+            body += '<input type="checkbox" checked data-fix-index="'+fix._index+'" style="width:18px;height:18px;margin-right:10px;cursor:pointer;accent-color:#e73249;">';
+            body += '<span style="background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:10px;font-size:11px;">Textkorrektur</span>';
+            body += '<span style="color:var(--text-muted);margin-left:auto;font-size:12px;">'+fix.message+'</span>';
             body += '</div>';
-            body += '<div style="padding:10px 14px;background:#fafafa;border-radius:4px;line-height:1.6;">' + diff_html(fix.original_value, fix.suggested_value) + '</div>';
+            body += '<div style="padding:10px 14px;background:#fafafa;border-radius:4px;line-height:1.6;margin-bottom:6px;">'+diff_html(fix.original_value, fix.suggested_value)+'</div>';
+            // Editable text field for custom formulation
+            body += '<details style="margin-top:4px;"><summary style="cursor:pointer;font-size:12px;color:var(--text-muted);">Eigene Formulierung eingeben</summary>';
+            body += '<textarea data-custom-text-index="'+fix._index+'" style="width:100%;min-height:60px;margin-top:6px;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:13px;font-family:inherit;" placeholder="Eigenen Text eingeben (überschreibt den KI-Vorschlag)..."></textarea>';
+            body += '</details>';
         }
 
-        // Service type suggestion (within same card)
+        // Service type suggestion
         if (has_svc) {
             let fix = group.svc;
-            let svc_badge = '<span style="background:#fff3e0;color:#e65100;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:8px;">Service-Typ</span>';
-            body += '<div style="' + (has_desc ? 'margin-top:10px;padding-top:10px;border-top:1px dashed #ddd;' : '') + 'display:flex;align-items:center;margin-bottom:6px;">';
-            body += '<input type="checkbox" checked data-fix-index="' + fix._index + '" style="width:18px;height:18px;margin-right:10px;cursor:pointer;accent-color:#ff9800;">';
-            if (!has_desc) body += '<strong>Position ' + pos_num + '</strong>';
-            body += svc_badge;
-            body += '<span style="color:var(--text-muted);margin-left:auto;font-size:12px;">' + fix.message + '</span>';
+            body += '<div style="'+(has_desc?'margin-top:10px;padding-top:10px;border-top:1px dashed #ddd;':'')+'display:flex;align-items:center;margin-bottom:6px;">';
+            body += '<input type="checkbox" checked data-fix-index="'+fix._index+'" style="width:18px;height:18px;margin-right:10px;cursor:pointer;accent-color:#ff9800;">';
+            body += '<span style="background:#fff3e0;color:#e65100;padding:2px 8px;border-radius:10px;font-size:11px;">Service-Typ</span>';
+            body += '<span style="color:var(--text-muted);margin-left:auto;font-size:12px;">'+fix.message+'</span>';
             body += '</div>';
             body += '<div style="padding:8px 12px;background:#fff3e0;border-radius:4px;">';
-            body += fix.original_value + ' \u2192 <strong>' + fix.suggested_value + '</strong>';
+            body += svc_type_badge(fix.original_value) + ' <span style="margin:0 6px;">\u2192</span> ' + svc_type_badge(fix.suggested_value);
             body += '</div>';
         }
 
@@ -626,22 +625,27 @@ function show_review_dialog(frm, fixes_data, from_submit) {
     let d = new frappe.ui.Dialog({
         title: __('Beschreibungen prüfen'),
         size: 'extra-large',
-        fields: [
-            {
-                fieldtype: 'HTML',
-                fieldname: 'review_content',
-                options: body
-            }
-        ],
+        fields: [{fieldtype:'HTML', fieldname:'review_content', options:body}],
         primary_action_label: primary_label,
         primary_action: function() {
-            // Collect only checked fixes (including service_type suggestions)
+            // Collect checked fixes, with custom text overrides
             let selected_fixes = [];
             fixes.forEach(function(fix, index) {
-                let cb = d.$wrapper.find('input[data-fix-index="' + index + '"]');
-                if (cb.length && cb.is(':checked')) {
-                    selected_fixes.push(fix);
+                let cb = d.$wrapper.find('input[data-fix-index="'+index+'"]');
+                if (!cb.length || !cb.is(':checked')) return;
+
+                // Check for custom text override
+                let custom_ta = d.$wrapper.find('textarea[data-custom-text-index="'+index+'"]');
+                if (custom_ta.length && custom_ta.val().trim()) {
+                    // Convert custom text to <p>• lines
+                    let lines = custom_ta.val().trim().split('\n').filter(l => l.trim());
+                    let html = lines.map(l => {
+                        l = l.trim().replace(/^[\u2022\-]\s*/, '');
+                        return '<p>\u2022 ' + l + '</p>';
+                    }).join('');
+                    fix = Object.assign({}, fix, {suggested_value: html});
                 }
+                selected_fixes.push(fix);
             });
 
             if (selected_fixes.length === 0) {
@@ -660,29 +664,19 @@ function show_review_dialog(frm, fixes_data, from_submit) {
                         let fm = fix.field.match(/work\[(\d+)\]\.(description|service_type)/);
                         if (fm) {
                             let idx = parseInt(fm[1]);
-                            let attr = fm[2];
-                            if (idx < frm.doc.work.length) {
-                                frm.doc.work[idx][attr] = fix.suggested_value;
-                            }
+                            if (idx < frm.doc.work.length) frm.doc.work[idx][fm[2]] = fix.suggested_value;
                         }
                     }
                 });
                 frm.refresh_field('work');
                 frm.save().then(() => {
-                    frm.call('submit', { flags: { skip_review: true } }).then(() => {
-                        frm.reload_doc();
-                    });
+                    frm.call('submit', {flags:{skip_review:true}}).then(() => frm.reload_doc());
                 });
             } else {
                 frappe.call({
                     method: 'fieldservice.fieldservice.doctype.service_report.service_report.apply_review',
-                    args: {
-                        service_report: frm.doc.name,
-                        fixes: JSON.stringify(selected_fixes)
-                    },
-                    callback: function() {
-                        frm.reload_doc();
-                    }
+                    args: {service_report:frm.doc.name, fixes:JSON.stringify(selected_fixes)},
+                    callback: function() { frm.reload_doc(); }
                 });
             }
         },
@@ -690,15 +684,12 @@ function show_review_dialog(frm, fixes_data, from_submit) {
         secondary_action: function() {
             d.hide();
             if (from_submit) {
-                frm.call('submit', { flags: { skip_review: true } }).then(() => {
-                    frm.reload_doc();
-                });
+                frm.call('submit', {flags:{skip_review:true}}).then(() => frm.reload_doc());
             }
         }
     });
 
-    // Make dialog wider
-    d.$wrapper.find('.modal-dialog').css('max-width', '900px');
+    d.$wrapper.find('.modal-dialog').css('max-width', '960px');
     d.show();
 }
 
