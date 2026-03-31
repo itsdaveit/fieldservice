@@ -254,6 +254,13 @@ frappe.ui.form.on('Service Report', {
             }, __("Aktionen"));
         }
 
+        // AI Review Log button (System Manager only)
+        if (frappe.user_roles.includes('System Manager') && frm.doc.ai_reviews && frm.doc.ai_reviews.length > 0) {
+            frm.add_custom_button(__('📊 KI-Review Protokoll'), function() {
+                show_ai_review_log(frm);
+            }, __("Aktionen"));
+        }
+
         // Style Aktionen button like Sales Invoice (itsdave red)
         setTimeout(() => {
             frm.$wrapper
@@ -816,6 +823,85 @@ function show_review_dialog(frm, fixes_data, from_submit) {
     d.$wrapper.find('textarea[data-custom-text-index]').on('input', function() {
         autosize(this);
     });
+}
+
+// ---------------------------------------------------------------------------
+// AI Review Log Dialog (System Manager only)
+// ---------------------------------------------------------------------------
+
+function show_ai_review_log(frm) {
+    let reviews = frm.doc.ai_reviews || [];
+    if (!reviews.length) {
+        frappe.msgprint(__('Keine KI-Reviews vorhanden.'));
+        return;
+    }
+
+    let body = '<div style="font-size:13px;">';
+
+    reviews.slice().reverse().forEach(function(review, i) {
+        let ts = frappe.datetime.str_to_user(review.timestamp);
+        let total = (review.applied_count || 0) + (review.rejected_count || 0);
+
+        body += '<div style="margin-bottom:16px;padding:14px;border:1px solid var(--border-color);border-radius:6px;background:#fff;">';
+
+        // Header
+        body += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #eee;">';
+        body += '<strong style="font-size:14px;">Review #' + (reviews.length - i) + '</strong>';
+        body += '<span style="color:var(--text-muted);font-size:12px;">' + ts + '</span>';
+        body += '<span style="background:#f5f5f5;padding:2px 8px;border-radius:10px;font-size:11px;">' + (review.ai_model || '?') + '</span>';
+        body += '<span style="margin-left:auto;">';
+        if (review.applied_count) body += '<span style="background:#c8e6c9;color:#2e7d32;padding:2px 8px;border-radius:10px;font-size:11px;margin-right:4px;">✓ ' + review.applied_count + ' übernommen</span>';
+        if (review.rejected_count) body += '<span style="background:#ffcdd2;color:#c62828;padding:2px 8px;border-radius:10px;font-size:11px;margin-right:4px;">✗ ' + review.rejected_count + ' abgelehnt</span>';
+        if (review.hint_count) body += '<span style="background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:10px;font-size:11px;">💡 ' + review.hint_count + ' Hinweise</span>';
+        body += '</span></div>';
+
+        // Decisions detail
+        try {
+            let decisions = JSON.parse(review.user_decisions || '{}');
+            let review_data = JSON.parse(review.review_data || '{}');
+            let fixes = review_data.fixes || [];
+            let decs = decisions.decisions || [];
+
+            fixes.forEach(function(fix, j) {
+                let dec = decs[j] || {};
+                let accepted = dec.accepted;
+                let icon, bg;
+                if (accepted === true) { icon = '✓'; bg = '#e8f5e9'; }
+                else if (accepted === false) { icon = '✗'; bg = '#fce4ec'; }
+                else { icon = '💡'; bg = '#e3f2fd'; }
+
+                let field_label = fix.field || '';
+                let fm = field_label.match(/work\[(\d+)\]/);
+                if (fm) field_label = 'Position ' + (parseInt(fm[1]) + 1);
+                if (field_label === 'titel') field_label = 'Titel';
+                if (field_label === 'report_type') field_label = 'Service-Typ';
+
+                body += '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 8px;margin-bottom:4px;background:' + bg + ';border-radius:4px;font-size:12px;">';
+                body += '<span style="font-size:14px;flex-shrink:0;">' + icon + '</span>';
+                body += '<div style="flex:1;">';
+                body += '<strong>' + field_label + '</strong>';
+                if (fix.message) body += ' — <span style="color:#666;">' + fix.message + '</span>';
+                if (dec.custom_text) body += '<div style="margin-top:4px;color:#555;font-style:italic;">Eigener Text: ' + dec.custom_text.substring(0, 100) + (dec.custom_text.length > 100 ? '...' : '') + '</div>';
+                body += '</div></div>';
+            });
+        } catch(e) {
+            body += '<div style="color:#999;font-size:12px;">Daten nicht lesbar</div>';
+        }
+
+        body += '</div>';
+    });
+
+    body += '</div>';
+
+    let d = new frappe.ui.Dialog({
+        title: __('KI-Review Protokoll'),
+        size: 'extra-large',
+        fields: [{fieldtype: 'HTML', fieldname: 'log_content', options: body}],
+        primary_action_label: __('Schließen'),
+        primary_action: function() { d.hide(); }
+    });
+    d.$wrapper.find('.modal-dialog').css('max-width', '900px');
+    d.show();
 }
 
 // Hook into frappe submit to intercept review_required errors
