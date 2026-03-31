@@ -238,14 +238,17 @@ frappe.ui.form.on('Service Report', {
             }, __("Aktionen"));
 
             frm.add_custom_button(__('🤖 KI-Textkorrektur'), function() {
+                show_ai_loading();
                 frappe.call({
                     method: 'fieldservice.fieldservice.doctype.service_report.service_report.run_llm_review',
                     args: { service_report: frm.doc.name },
-                    freeze: true,
-                    freeze_message: __('KI prüft Beschreibungen...'),
                     callback: function(r) {
+                        hide_ai_loading();
                         if (!r.message || r.message.length === 0) return;
                         show_review_dialog(frm, JSON.stringify(r.message));
+                    },
+                    error: function() {
+                        hide_ai_loading();
                     }
                 });
             }, __("Aktionen"));
@@ -405,6 +408,50 @@ frappe.ui.form.on('Service Report Work',{
     }
 });
 
+
+// ---------------------------------------------------------------------------
+// AI Loading Overlay
+// ---------------------------------------------------------------------------
+
+function show_ai_loading() {
+    if (document.getElementById('ai-loading-overlay')) return;
+    let overlay = document.createElement('div');
+    overlay.id = 'ai-loading-overlay';
+    overlay.innerHTML = `
+        <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.4);z-index:10000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px);">
+            <div style="background:#fff;border-radius:16px;padding:40px 50px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-width:400px;">
+                <div style="width:60px;height:60px;margin:0 auto 20px;position:relative;">
+                    <div style="position:absolute;width:60px;height:60px;border:3px solid #f0f0f0;border-top:3px solid #e73249;border-radius:50%;animation:ai-spin 1s linear infinite;"></div>
+                    <div style="position:absolute;width:40px;height:40px;top:10px;left:10px;border:3px solid #f0f0f0;border-bottom:3px solid #1565c0;border-radius:50%;animation:ai-spin 0.7s linear infinite reverse;"></div>
+                    <div style="position:absolute;width:20px;height:20px;top:20px;left:20px;border:3px solid #f0f0f0;border-top:3px solid #2e7d32;border-radius:50%;animation:ai-spin 0.5s linear infinite;"></div>
+                </div>
+                <div style="font-size:16px;font-weight:600;color:#333;margin-bottom:6px;">KI prüft Beschreibungen</div>
+                <div style="font-size:13px;color:#888;" id="ai-loading-status">Texte werden analysiert...</div>
+            </div>
+        </div>
+        <style>
+            @keyframes ai-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        </style>
+    `;
+    document.body.appendChild(overlay);
+
+    // Animate status text
+    let messages = ['Texte werden analysiert...', 'Rechtschreibung wird geprüft...', 'Grammatik wird korrigiert...', 'Formulierungen werden verbessert...', 'Service-Typ wird bewertet...'];
+    let idx = 0;
+    overlay._interval = setInterval(() => {
+        idx = (idx + 1) % messages.length;
+        let el = document.getElementById('ai-loading-status');
+        if (el) el.textContent = messages[idx];
+    }, 2000);
+}
+
+function hide_ai_loading() {
+    let overlay = document.getElementById('ai-loading-overlay');
+    if (overlay) {
+        clearInterval(overlay._interval);
+        overlay.remove();
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Review Pipeline: Confirm Dialog
