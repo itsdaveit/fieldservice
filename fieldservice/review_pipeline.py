@@ -93,7 +93,7 @@ class ReviewPipeline:
 # HTML helpers
 # ---------------------------------------------------------------------------
 
-QUILL_BULLET_TEMPLATE = (
+QUILL_BULLET = (
     '<li data-list="bullet">'
     '<span class="ql-ui" contenteditable="false"></span>'
     '{text}'
@@ -102,52 +102,76 @@ QUILL_BULLET_TEMPLATE = (
 
 
 def extract_paragraphs(html: str) -> list[str]:
-    """Extract text content from <p> tags in Quill HTML.
+    """Extract raw content from <p> tags in Quill HTML.
 
-    Returns list of paragraph texts (may contain inline HTML like <br>).
-    Skips empty paragraphs.
+    Returns list of paragraph contents (may contain inline HTML).
+    Preserves empty paragraphs as empty strings for structure detection.
     """
     # Remove ql-editor wrapper
     html = re.sub(r'<div class="ql-editor[^"]*">', '', html)
     html = re.sub(r'</div>\s*$', '', html)
 
     paragraphs = re.findall(r'<p>(.*?)</p>', html, re.DOTALL)
-
-    result = []
-    for p in paragraphs:
-        # Strip trailing <br> tags
-        text = re.sub(r'<br\s*/?>$', '', p).strip()
-        if text:
-            result.append(text)
-    return result
+    return paragraphs
 
 
-def is_bullet_prefix(text: str) -> bool:
-    """Check if text starts with a dash used as bullet point (not arrow ->)."""
-    stripped = text.lstrip()
-    if not stripped.startswith('-'):
+def is_empty_paragraph(text: str) -> bool:
+    """Check if paragraph is empty (just <br> or whitespace)."""
+    cleaned = re.sub(r'<br\s*/?>', '', text).strip()
+    return not cleaned
+
+
+def clean_paragraph_text(text: str) -> str:
+    """Clean a paragraph: strip trailing <br>, leading/trailing whitespace, &nbsp;."""
+    text = re.sub(r'<br\s*/?>$', '', text)
+    text = text.replace('&nbsp;', ' ')
+    text = text.strip()
+    return text
+
+
+def is_dash_bullet(text: str) -> bool:
+    """Check if cleaned text starts with a dash used as bullet (not arrow ->)."""
+    if not text.startswith('-'):
         return False
-    # Check it's not an arrow (-> or -&gt;)
-    after_dash = stripped[1:]
+    after_dash = text[1:]
     if after_dash.startswith('>') or after_dash.startswith('&gt;'):
         return False
     return True
 
 
-def strip_bullet_prefix(text: str) -> str:
-    """Remove leading dash and optional whitespace from bullet text."""
-    stripped = text.lstrip()
-    if stripped.startswith('-'):
-        stripped = stripped[1:].lstrip()
-    return stripped
+def strip_dash(text: str) -> str:
+    """Remove leading dash and optional whitespace."""
+    if text.startswith('-'):
+        return text[1:].lstrip()
+    return text
 
 
-def paragraphs_to_bullet_html(paragraphs: list[str]) -> str:
-    """Convert list of paragraph texts to Quill bullet-list HTML."""
-    items = []
-    for text in paragraphs:
-        items.append(QUILL_BULLET_TEMPLATE.format(text=text))
-    return '<ol>' + ''.join(items) + '</ol>'
+def is_indented_sub_item(raw_text: str) -> bool:
+    """Check if raw paragraph text is an indented sub-item (starts with spaces/nbsp + dash)."""
+    cleaned = raw_text.replace('&nbsp;', ' ')
+    # Must have at least 2 leading spaces before the dash
+    stripped = cleaned.lstrip()
+    leading_spaces = len(cleaned) - len(stripped)
+    return leading_spaces >= 2 and is_dash_bullet(stripped)
+
+
+def format_as_bullet_list(items: list[dict]) -> str:
+    """Convert structured items to Quill bullet-list HTML.
+
+    Each item is a dict with:
+        - text: the display text
+        - type: 'heading', 'bullet', or 'sub_bullet'
+    """
+    parts = []
+    for item in items:
+        text = item['text']
+        if not text:
+            continue
+        parts.append(QUILL_BULLET.format(text=text))
+
+    if not parts:
+        return ''
+    return '<ol>' + ''.join(parts) + '</ol>'
 
 
 # ---------------------------------------------------------------------------
@@ -155,10 +179,14 @@ def paragraphs_to_bullet_html(paragraphs: list[str]) -> str:
 # ---------------------------------------------------------------------------
 
 class BulletFormattingStep(ReviewStep):
-    """Convert dash-prefixed paragraphs to Quill bullet lists.
+    """Convert dash-prefixed paragraphs to uniform Quill bullet lists.
 
-    Input:  <p>-Scanner installiert</p><p>-System getestet</p>
-    Output: <ol><li data-list="bullet">...Scanner installiert</li>...</ol>
+    Handles:
+    - Simple: <p>-Text</p> → bullet item
+    - With space: <p> - Text</p> → bullet item
+    - Headings: <p>Heading</p> followed by <p>-item</p> → heading as bold bullet
+    - Sub-items: <p> &nbsp; - sub item</p> → indented text with dash replaced
+    - Empty paragraphs between sections are removed
     """
 
     name = "bullet_formatting"
@@ -175,37 +203,102 @@ class BulletFormattingStep(ReviewStep):
             if '<li data-list="bullet">' in desc:
                 continue
 
-            paragraphs = extract_paragraphs(desc)
-            if not paragraphs:
+            raw_paragraphs = extract_paragraphs(desc)
+            if not raw_paragraphs:
                 continue
 
-            # Check if any paragraph starts with a dash bullet
-            has_bullets = any(is_bullet_prefix(p) for p in paragraphs)
-            if not has_bullets:
+            # Check if any paragraph has a dash bullet pattern
+            has_any_bullet = False
+            for raw_p in raw_paragraphs:
+                cleaned = clean_paragraph_text(raw_p)
+                if is_dash_bullet(cleaned):
+                    has_any_bullet = True
+                    break
+                # Also check for " - " pattern (space-dash-space)
+                stripped_raw = raw_p.replace('&nbsp;', ' ').strip()
+                if is_dash_bullet(stripped_raw.lstrip()):
+                    has_any_bullet = True
+                    break
+
+            if not has_any_bullet:
                 continue
 
-            # Need at least one paragraph to convert
-            # Strip dash prefix from all paragraphs (mixed with/without dash)
-            cleaned = []
-            for p in paragraphs:
-                if is_bullet_prefix(p):
-                    cleaned.append(strip_bullet_prefix(p))
-                else:
-                    cleaned.append(p)
+            # Parse into structured items
+            items = self._parse_structured(raw_paragraphs)
+            if not items:
+                continue
 
-            new_html = paragraphs_to_bullet_html(cleaned)
+            new_html = format_as_bullet_list(items)
+            if not new_html or new_html == desc:
+                continue
 
-            if new_html != desc:
-                results.append(ReviewResult(
-                    step_name=self.name,
-                    field=f"work[{i}].description",
-                    original_value=desc,
-                    suggested_value=new_html,
-                    change_type="auto_fix",
-                    message=f"Position {i+1}: {len(cleaned)} Aufzählungspunkte formatiert",
-                ))
+            bullet_count = len([it for it in items if it['text']])
+            results.append(ReviewResult(
+                step_name=self.name,
+                field=f"work[{i}].description",
+                original_value=desc,
+                suggested_value=new_html,
+                change_type="auto_fix",
+                message=f"Position {i+1}: {bullet_count} Aufzählungspunkte formatiert",
+            ))
 
         return results
+
+    def _parse_structured(self, raw_paragraphs: list[str]) -> list[dict]:
+        """Parse paragraphs into structured items with type detection.
+
+        Recognizes:
+        - Empty paragraphs (skipped)
+        - Dash-prefixed items → bullet
+        - Indented dash items → sub_bullet (text prefixed with "  ")
+        - Non-dash paragraphs before bullets → heading (bold)
+        - Non-dash paragraphs after bullets → regular bullet
+        """
+        items = []
+        non_empty = []
+
+        # First pass: collect non-empty paragraphs with their types
+        for raw_p in raw_paragraphs:
+            if is_empty_paragraph(raw_p):
+                continue
+
+            cleaned = clean_paragraph_text(raw_p)
+            if not cleaned:
+                continue
+
+            if is_indented_sub_item(raw_p):
+                # Indented sub-item: strip all leading whitespace and dash
+                text = raw_p.replace('&nbsp;', ' ').strip()
+                text = strip_dash(text)
+                non_empty.append({'text': '  ' + text, 'type': 'sub_bullet', 'raw': raw_p})
+            elif is_dash_bullet(cleaned):
+                text = strip_dash(cleaned)
+                non_empty.append({'text': text, 'type': 'bullet', 'raw': raw_p})
+            else:
+                non_empty.append({'text': cleaned, 'type': 'plain', 'raw': raw_p})
+
+        if not non_empty:
+            return []
+
+        # Second pass: determine if plain items are headings or regular bullets
+        # A "plain" item followed by bullet items is a heading
+        result = []
+        for idx, item in enumerate(non_empty):
+            if item['type'] == 'plain':
+                # Look ahead: is the next non-plain item a bullet?
+                next_items = non_empty[idx + 1:idx + 3]
+                has_following_bullet = any(n['type'] in ('bullet', 'sub_bullet') for n in next_items)
+
+                if has_following_bullet:
+                    # This is a heading — make it bold
+                    result.append({'text': '<strong>' + item['text'] + '</strong>', 'type': 'heading'})
+                else:
+                    # Regular item, just make it a bullet
+                    result.append({'text': item['text'], 'type': 'bullet'})
+            else:
+                result.append(item)
+
+        return result
 
 
 # ---------------------------------------------------------------------------
@@ -257,13 +350,14 @@ class CapitalizationStep(ReviewStep):
         return original
 
     def _capitalize_bullets(self, html: str) -> str:
-        """Capitalize first letter after each bullet span."""
+        """Capitalize first letter after each bullet span (skip bold headings)."""
         def capitalize_match(m):
             prefix = m.group(1)
             first_char = m.group(2)
             return prefix + first_char.upper()
 
-        # Match the closing </span> followed by the first letter
+        # Match the closing </span> followed by a lowercase letter
+        # (not followed by <strong> which indicates a heading)
         return re.sub(
             r'(contenteditable="false"></span>)([a-zäöü])',
             capitalize_match,
