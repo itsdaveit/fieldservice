@@ -258,8 +258,25 @@ def run_llm_review(service_report):
 	step = LLMTextCorrectionStep(api_key, model, system_prompt)
 	results = step.execute(doc, pipeline.results)
 
+	# Log the query even if no corrections were suggested
+	import json
+	result_dicts = [r.to_dict() for r in results]
+	review_data = json.dumps({'fixes': result_dicts}, ensure_ascii=False)
+
 	if not results:
+		# No corrections — log as empty review
+		doc.append('ai_reviews', {
+			'timestamp': frappe.utils.now(),
+			'ai_model': model,
+			'review_data': review_data,
+			'user_decisions': json.dumps({'decisions': [], 'note': 'no_corrections_needed'}, ensure_ascii=False),
+			'applied_count': 0,
+			'rejected_count': 0,
+			'hint_count': 0,
+		})
+		doc.flags.skip_validation = True
+		doc.save()
 		frappe.msgprint(_('Keine KI-Korrekturen nötig.'), indicator='green')
 		return []
 
-	return [r.to_dict() for r in results]
+	return result_dicts
