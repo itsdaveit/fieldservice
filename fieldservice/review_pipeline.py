@@ -93,12 +93,7 @@ class ReviewPipeline:
 # HTML helpers
 # ---------------------------------------------------------------------------
 
-QUILL_BULLET = (
-    '<li data-list="bullet">'
-    '<span class="ql-ui" contenteditable="false"></span>'
-    '{text}'
-    '</li>'
-)
+BULLET_CHAR = '\u2022'  # •
 
 
 def extract_paragraphs(html: str) -> list[str]:
@@ -156,22 +151,21 @@ def is_indented_sub_item(raw_text: str) -> bool:
 
 
 def format_as_bullet_list(items: list[dict]) -> str:
-    """Convert structured items to Quill bullet-list HTML.
+    """Convert structured items to simple <p> tags with bullet character.
 
-    Each item is a dict with:
-        - text: the display text
-        - type: 'heading', 'bullet', or 'sub_bullet'
+    Uses plain <p>• Text</p> format which renders consistently
+    in Quill editor, print preview, and PDF — no list indentation issues.
     """
     parts = []
     for item in items:
         text = item['text']
         if not text:
             continue
-        parts.append(QUILL_BULLET.format(text=text))
+        parts.append(f'<p>{BULLET_CHAR} {text}</p>')
 
     if not parts:
         return ''
-    return '<ul>' + ''.join(parts) + '</ul>'
+    return ''.join(parts)
 
 
 # ---------------------------------------------------------------------------
@@ -199,8 +193,22 @@ class BulletFormattingStep(ReviewStep):
             if not desc:
                 continue
 
-            # Skip if already formatted as bullet list
-            if '<li data-list="bullet">' in desc:
+            # Check if this is an existing Quill bullet list that needs conversion
+            has_quill_bullets = '<li data-list="bullet">' in desc
+
+            if has_quill_bullets:
+                # Convert existing Quill bullets to uniform <p>• format
+                new_html = self._convert_quill_bullets(desc)
+                if new_html and new_html != desc:
+                    bullet_count = new_html.count(BULLET_CHAR)
+                    results.append(ReviewResult(
+                        step_name=self.name,
+                        field=f"work[{i}].description",
+                        original_value=desc,
+                        suggested_value=new_html,
+                        change_type="auto_fix",
+                        message=f"Position {i+1}: {bullet_count} Aufzählungspunkte vereinheitlicht",
+                    ))
                 continue
 
             raw_paragraphs = extract_paragraphs(desc)
@@ -300,16 +308,33 @@ class BulletFormattingStep(ReviewStep):
 
         return result
 
+    def _convert_quill_bullets(self, html: str) -> str:
+        """Convert existing Quill <ul>/<ol> bullet lists to <p>• format."""
+        # Extract text from each <li data-list="bullet">
+        items = re.findall(
+            r'<li data-list="bullet"><span[^>]*></span>\s*(.*?)\s*</li>',
+            html, re.DOTALL
+        )
+        if not items:
+            return None
+
+        parts = []
+        for text in items:
+            text = text.strip()
+            if text:
+                parts.append(f'<p>{BULLET_CHAR} {text}</p>')
+
+        return ''.join(parts) if parts else None
+
 
 # ---------------------------------------------------------------------------
 # Step 2: Capitalization
 # ---------------------------------------------------------------------------
 
 class CapitalizationStep(ReviewStep):
-    """Capitalize first letter of bullet items after dash removal.
+    """Capitalize first letter of bullet items.
 
-    Only acts on descriptions that were already converted to bullet lists
-    (either by BulletFormattingStep or pre-existing).
+    Works with the <p>• text</p> format.
     """
 
     name = "capitalization"
@@ -318,14 +343,13 @@ class CapitalizationStep(ReviewStep):
         results = []
 
         for i, work in enumerate(doc.work):
-            # Get the current or already-corrected description
             field_key = f"work[{i}].description"
             desc = self._get_current_value(field_key, work.description, previous_results)
             if not desc:
                 continue
 
-            # Only process bullet lists
-            if '<li data-list="bullet">' not in desc:
+            # Only process descriptions with bullet character
+            if BULLET_CHAR not in desc:
                 continue
 
             new_desc = self._capitalize_bullets(desc)
@@ -343,23 +367,19 @@ class CapitalizationStep(ReviewStep):
 
     def _get_current_value(self, field_key: str, original: str,
                            previous_results: list[ReviewResult]) -> str:
-        """Get the latest value for a field, considering previous step results."""
         for result in reversed(previous_results):
             if result.field == field_key and result.suggested_value:
                 return result.suggested_value
         return original
 
     def _capitalize_bullets(self, html: str) -> str:
-        """Capitalize first letter after each bullet span (skip bold headings)."""
+        """Capitalize first letter after bullet character (skip bold/tags)."""
         def capitalize_match(m):
-            prefix = m.group(1)
-            first_char = m.group(2)
-            return prefix + first_char.upper()
+            return m.group(1) + m.group(2).upper()
 
-        # Match the closing </span> followed by a lowercase letter
-        # (not followed by <strong> which indicates a heading)
+        # Match "• " followed by a lowercase letter (not a tag like <strong>)
         return re.sub(
-            r'(contenteditable="false"></span>)([a-zäöü])',
+            rf'({re.escape(BULLET_CHAR)} )([a-zäöü])',
             capitalize_match,
             html
         )
