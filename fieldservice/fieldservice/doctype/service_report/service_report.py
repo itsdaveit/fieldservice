@@ -10,6 +10,7 @@ from frappe import _
 from frappe.contacts.doctype.address.address import get_address_display
 from fieldservice.api import get_amount_of_hours
 from fieldservice.validation import validate_service_report
+from fieldservice.review_pipeline import build_default_pipeline
 
 class ServiceReport(Document):
 	def on_submit(self):
@@ -17,8 +18,45 @@ class ServiceReport(Document):
 		self.save()
 	
 	def before_submit(self):
+		# Skip review if flag is set (user chose to skip in confirm dialog)
+		if not self.flags.get("skip_review"):
+			self._run_review_pipeline()
+
 		# Use the new validation function with throw_errors=True
 		validate_service_report(self, throw_errors=True)
+
+	def _run_review_pipeline(self):
+		"""Run the review pipeline and apply or present corrections."""
+		import json
+
+		settings = frappe.get_single("Fieldservice Settings")
+		review_mode = getattr(settings, "review_mode", "Off")
+		if review_mode == "Off":
+			return
+
+		pipeline = build_default_pipeline(self)
+		results = pipeline.run()
+		fixes = pipeline.get_fixes()
+
+		if not fixes:
+			return
+
+		if review_mode == "Auto-Apply":
+			applied = pipeline.apply_auto_fixes()
+			if applied:
+				messages = [r.message for r in applied]
+				frappe.msgprint(
+					_("Beschreibungen automatisch korrigiert:") + "<br>" + "<br>".join(messages),
+					indicator="green",
+					alert=True
+				)
+
+		elif review_mode == "Confirm":
+			frappe.throw(
+				msg=json.dumps([r.to_dict() for r in fixes], ensure_ascii=False),
+				title="review_required",
+				exc=frappe.ValidationError
+			)
 	
 	def before_save(self):
 		# Skip validation warnings during timer start/stop

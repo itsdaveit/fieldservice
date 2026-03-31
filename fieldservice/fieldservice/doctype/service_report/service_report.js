@@ -374,3 +374,106 @@ frappe.ui.form.on('Service Report Work',{
     }
 });
 
+
+// ---------------------------------------------------------------------------
+// Review Pipeline: Confirm Dialog
+// ---------------------------------------------------------------------------
+
+function show_review_dialog(frm, fixes_json) {
+    let fixes;
+    try {
+        fixes = JSON.parse(fixes_json);
+    } catch(e) {
+        frappe.msgprint(__('Error parsing review data'));
+        return;
+    }
+
+    let body = '<div class="review-results">';
+    fixes.forEach(function(fix) {
+        let field_match = fix.field.match(/work\[(\d+)\]/);
+        let pos_label = field_match ? 'Position ' + (parseInt(field_match[1]) + 1) : fix.field;
+        
+        body += '<div class="review-item" style="margin-bottom: 15px; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px;">';
+        body += '<strong>' + pos_label + '</strong> &mdash; ' + fix.message + '<br>';
+        body += '<div style="margin-top: 8px;">';
+        body += '<div style="margin-bottom: 5px;"><span class="text-muted">Vorher:</span></div>';
+        body += '<div style="padding: 5px; background: var(--bg-light-gray); border-radius: 3px; margin-bottom: 8px;">' + fix.original_value + '</div>';
+        body += '<div style="margin-bottom: 5px;"><span class="text-muted">Nachher:</span></div>';
+        body += '<div style="padding: 5px; background: #e8f5e9; border-radius: 3px;">' + fix.suggested_value + '</div>';
+        body += '</div></div>';
+    });
+    body += '</div>';
+
+    let d = new frappe.ui.Dialog({
+        title: __('Beschreibungen pruefen'),
+        size: 'large',
+        fields: [
+            {
+                fieldtype: 'HTML',
+                fieldname: 'review_content',
+                options: body
+            }
+        ],
+        primary_action_label: __('Uebernehmen & Buchen'),
+        primary_action: function() {
+            fixes.forEach(function(fix) {
+                let field_match = fix.field.match(/work\[(\d+)\]\.description/);
+                if (field_match) {
+                    let idx = parseInt(field_match[1]);
+                    if (idx < frm.doc.work.length) {
+                        frm.doc.work[idx].description = fix.suggested_value;
+                    }
+                }
+            });
+            frm.refresh_field('work');
+            d.hide();
+            
+            frm.save().then(() => {
+                frm.call('submit', { flags: { skip_review: true } }).then(() => {
+                    frm.reload_doc();
+                });
+            });
+        },
+        secondary_action_label: __('Ueberspringen'),
+        secondary_action: function() {
+            d.hide();
+            frm.call('submit', { flags: { skip_review: true } }).then(() => {
+                frm.reload_doc();
+            });
+        }
+    });
+    d.show();
+}
+
+// Hook into frappe submit to intercept review_required errors
+const _original_submit = frappe.ui.form.Form.prototype.submit;
+if (!frappe.ui.form.Form.prototype._review_submit_patched) {
+    frappe.ui.form.Form.prototype._review_submit_patched = true;
+    frappe.ui.form.Form.prototype.submit = function() {
+        const frm = this;
+        if (frm.doctype !== 'Service Report') {
+            return _original_submit.apply(this, arguments);
+        }
+        
+        return new Promise((resolve, reject) => {
+            _original_submit.apply(this, arguments)
+                .then(resolve)
+                .catch(function(err) {
+                    if (err && err._server_messages) {
+                        try {
+                            let messages = JSON.parse(err._server_messages);
+                            for (let msg of messages) {
+                                let parsed = JSON.parse(msg);
+                                if (parsed.title === 'review_required') {
+                                    show_review_dialog(frm, parsed.message);
+                                    resolve();
+                                    return;
+                                }
+                            }
+                        } catch(e) {}
+                    }
+                    reject(err);
+                });
+        });
+    };
+}

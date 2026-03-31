@@ -6,7 +6,9 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "max_work_duration"
+  "max_work_duration",
+  "review_section",
+  "review_mode"
  ],
  "fields": [
   {
@@ -15,6 +17,19 @@
    "fieldname": "max_work_duration",
    "fieldtype": "Int",
    "label": "Max Work Duration"
+  },
+  {
+   "fieldname": "review_section",
+   "fieldtype": "Section Break",
+   "label": "Service Report Review"
+  },
+  {
+   "fieldname": "review_mode",
+   "fieldtype": "Select",
+   "label": "Review Mode",
+   "options": "Off\nAuto-Apply\nConfirm",
+   "default": "Off",
+   "description": "Auto-Apply: Corrections applied automatically on submit. Confirm: User must approve corrections before submit. Off: No automatic corrections."
   }
  ],
  "index_web_pages_for_search": 1,
