@@ -633,7 +633,7 @@ function show_review_dialog(frm, fixes_data, from_submit) {
             body += '<div style="padding:10px 14px;background:#fafafa;border-radius:4px;line-height:1.6;margin-bottom:6px;">'+diff_html(fix.original_value, fix.suggested_value)+'</div>';
             // Editable text field for custom formulation
             body += '<details style="margin-top:4px;"><summary style="cursor:pointer;font-size:12px;color:var(--text-muted);">Eigene Formulierung eingeben</summary>';
-            let prefill = strip_html(fix.suggested_value).replace(/ \u2022 /g, '\n\u2022 ');
+            let prefill = extract_lines(fix.suggested_value).join('\n');
             body += '<textarea data-custom-text-index="'+fix._index+'" data-original-prefill="'+encodeURIComponent(prefill)+'" style="width:100%;min-height:60px;margin-top:6px;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:13px;font-family:inherit;">'+prefill+'</textarea>';
             body += '</details>';
         }
