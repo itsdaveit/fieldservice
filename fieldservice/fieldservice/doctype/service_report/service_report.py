@@ -137,3 +137,48 @@ def toggle_timer(service_report):
 	if report_doc.status == "Draft":
 		start_timer(service_report)
 		return "Timer started" 
+@frappe.whitelist()
+def run_review(service_report):
+	"""Run review pipeline and return fixes as JSON. Called from button."""
+	import json
+	from fieldservice.review_pipeline import build_default_pipeline
+
+	doc = frappe.get_doc('Service Report', service_report)
+	pipeline = build_default_pipeline(doc)
+	results = pipeline.run()
+	fixes = pipeline.get_fixes()
+
+	if not fixes:
+		frappe.msgprint(_('Keine Korrekturen nötig.'), indicator='green')
+		return []
+
+	return [r.to_dict() for r in fixes]
+
+@frappe.whitelist()
+def apply_review(service_report, fixes):
+	"""Apply review fixes to work descriptions and save."""
+	import json
+
+	doc = frappe.get_doc('Service Report', service_report)
+	if isinstance(fixes, str):
+		fixes = json.loads(fixes)
+
+	import re
+	applied = 0
+	for fix in fixes:
+		m = re.match(r'work\[(\d+)\]\.description', fix.get('field', ''))
+		if m and fix.get('suggested_value'):
+			idx = int(m.group(1))
+			if idx < len(doc.work):
+				doc.work[idx].description = fix['suggested_value']
+				applied += 1
+
+	if applied:
+		doc.flags.skip_validation = True
+		doc.save()
+		frappe.msgprint(
+			_('{0} Beschreibung(en) korrigiert.').format(applied),
+			indicator='green'
+		)
+
+	return applied

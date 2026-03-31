@@ -223,13 +223,20 @@ frappe.ui.form.on('Service Report', {
                 indicator: 'green'
             });
         }, __("Funktionen"));
-        
-        
-        
-        
-        
-        
-         
+
+        // Review Pipeline button (only in Draft)
+        if (frm.doc.status === "Draft" && !frm.is_new()) {
+            frm.add_custom_button(__('Beschreibungen pruefen'), function() {
+                frappe.call({
+                    method: 'fieldservice.fieldservice.doctype.service_report.service_report.run_review',
+                    args: { service_report: frm.doc.name },
+                    callback: function(r) {
+                        if (!r.message || r.message.length === 0) return;
+                        show_review_dialog(frm, JSON.stringify(r.message));
+                    }
+                });
+            }, __("Funktionen"));
+        }
         
     },
 
@@ -379,10 +386,14 @@ frappe.ui.form.on('Service Report Work',{
 // Review Pipeline: Confirm Dialog
 // ---------------------------------------------------------------------------
 
-function show_review_dialog(frm, fixes_json) {
+function show_review_dialog(frm, fixes_data, from_submit) {
     let fixes;
     try {
-        fixes = JSON.parse(fixes_json);
+        if (typeof fixes_data === 'string') {
+            fixes = JSON.parse(fixes_data);
+        } else {
+            fixes = fixes_data;
+        }
     } catch(e) {
         frappe.msgprint(__('Error parsing review data'));
         return;
@@ -392,7 +403,7 @@ function show_review_dialog(frm, fixes_json) {
     fixes.forEach(function(fix) {
         let field_match = fix.field.match(/work\[(\d+)\]/);
         let pos_label = field_match ? 'Position ' + (parseInt(field_match[1]) + 1) : fix.field;
-        
+
         body += '<div class="review-item" style="margin-bottom: 15px; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px;">';
         body += '<strong>' + pos_label + '</strong> &mdash; ' + fix.message + '<br>';
         body += '<div style="margin-top: 8px;">';
@@ -404,6 +415,9 @@ function show_review_dialog(frm, fixes_json) {
     });
     body += '</div>';
 
+    let primary_label = from_submit ? __('Uebernehmen & Buchen') : __('Uebernehmen');
+    let secondary_label = from_submit ? __('Ohne Korrektur buchen') : __('Abbrechen');
+
     let d = new frappe.ui.Dialog({
         title: __('Beschreibungen pruefen'),
         size: 'large',
@@ -414,32 +428,49 @@ function show_review_dialog(frm, fixes_json) {
                 options: body
             }
         ],
-        primary_action_label: __('Uebernehmen & Buchen'),
+        primary_action_label: primary_label,
         primary_action: function() {
-            fixes.forEach(function(fix) {
-                let field_match = fix.field.match(/work\[(\d+)\]\.description/);
-                if (field_match) {
-                    let idx = parseInt(field_match[1]);
-                    if (idx < frm.doc.work.length) {
-                        frm.doc.work[idx].description = fix.suggested_value;
-                    }
-                }
-            });
-            frm.refresh_field('work');
             d.hide();
-            
-            frm.save().then(() => {
+            if (from_submit) {
+                // Apply locally, save, then re-submit
+                fixes.forEach(function(fix) {
+                    let field_match = fix.field.match(/work\[(\d+)\]\.description/);
+                    if (field_match) {
+                        let idx = parseInt(field_match[1]);
+                        if (idx < frm.doc.work.length) {
+                            frm.doc.work[idx].description = fix.suggested_value;
+                        }
+                    }
+                });
+                frm.refresh_field('work');
+                frm.save().then(() => {
+                    frm.call('submit', { flags: { skip_review: true } }).then(() => {
+                        frm.reload_doc();
+                    });
+                });
+            } else {
+                // Button context: apply via server API and reload
+                frappe.call({
+                    method: 'fieldservice.fieldservice.doctype.service_report.service_report.apply_review',
+                    args: {
+                        service_report: frm.doc.name,
+                        fixes: JSON.stringify(fixes)
+                    },
+                    callback: function() {
+                        frm.reload_doc();
+                    }
+                });
+            }
+        },
+        secondary_action_label: secondary_label,
+        secondary_action: function() {
+            d.hide();
+            if (from_submit) {
+                // Submit without corrections
                 frm.call('submit', { flags: { skip_review: true } }).then(() => {
                     frm.reload_doc();
                 });
-            });
-        },
-        secondary_action_label: __('Ueberspringen'),
-        secondary_action: function() {
-            d.hide();
-            frm.call('submit', { flags: { skip_review: true } }).then(() => {
-                frm.reload_doc();
-            });
+            }
         }
     });
     d.show();
@@ -465,7 +496,7 @@ if (!frappe.ui.form.Form.prototype._review_submit_patched) {
                             for (let msg of messages) {
                                 let parsed = JSON.parse(msg);
                                 if (parsed.title === 'review_required') {
-                                    show_review_dialog(frm, parsed.message);
+                                    show_review_dialog(frm, parsed.message, true);
                                     resolve();
                                     return;
                                 }
