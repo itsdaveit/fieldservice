@@ -406,7 +406,7 @@ function show_review_dialog(frm, fixes_data, from_submit) {
         let preview = html
             .replace(/<ol>/g, '')
             .replace(/<\/ol>/g, '')
-            .replace(/<li data-list="bullet"><span[^>]*><\/span>\s*/g, '<div style="padding-left:1.2em;text-indent:-1.2em;margin-bottom:2px;">\u2022 ')
+            .replace(/<li data-list="bullet"><span[^>]*><\/span>\s*/g, '<div style="margin-bottom:2px;">\u2022 ')
             .replace(/<\/li>/g, '</div>');
         // Clean up ql-editor wrapper if present
         preview = preview.replace(/<div class="ql-editor[^"]*">/g, '').replace(/<\/div>\s*$/g, '');
