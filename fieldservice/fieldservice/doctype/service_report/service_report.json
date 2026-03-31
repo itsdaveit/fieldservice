@@ -53,7 +53,9 @@
   "aditional_info_section",
   "timer_status",
   "timer_start",
-  "ofork_ticket_number"
+  "ofork_ticket_number",
+  "ai_reviews_section",
+  "ai_reviews"
  ],
  "fields": [
   {
@@ -341,6 +343,20 @@
    "fieldname": "ofork_ticket_number",
    "fieldtype": "Data",
    "label": "Ofork Ticket Number"
+  },
+  {
+   "fieldname": "ai_reviews_section",
+   "fieldtype": "Section Break",
+   "label": "KI-Review Protokoll",
+   "collapsible": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "ai_reviews",
+   "fieldtype": "Table",
+   "label": "KI-Reviews",
+   "options": "Service Report AI Review",
+   "hidden": 1
   }
  ],
  "grid_page_length": 50,

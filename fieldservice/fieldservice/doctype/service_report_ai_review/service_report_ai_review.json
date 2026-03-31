@@ -1,0 +1,70 @@
+{
+ "actions": [],
+ "creation": "2026-04-01 01:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "timestamp",
+  "ai_model",
+  "applied_count",
+  "rejected_count",
+  "hint_count",
+  "review_data",
+  "user_decisions"
+ ],
+ "fields": [
+  {
+   "fieldname": "timestamp",
+   "fieldtype": "Datetime",
+   "label": "Zeitpunkt",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "ai_model",
+   "fieldtype": "Data",
+   "label": "KI-Modell",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "applied_count",
+   "fieldtype": "Int",
+   "label": "Übernommen",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "rejected_count",
+   "fieldtype": "Int",
+   "label": "Abgelehnt",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "hint_count",
+   "fieldtype": "Int",
+   "label": "Hinweise"
+  },
+  {
+   "fieldname": "review_data",
+   "fieldtype": "Long Text",
+   "label": "KI-Vorschläge (JSON)",
+   "hidden": 1
+  },
+  {
+   "fieldname": "user_decisions",
+   "fieldtype": "Long Text",
+   "label": "User-Entscheidungen (JSON)",
+   "hidden": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-04-01 01:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fieldservice",
+ "name": "Service Report AI Review",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC"
+}

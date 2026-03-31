@@ -155,8 +155,8 @@ def run_review(service_report):
 	return [r.to_dict() for r in fixes]
 
 @frappe.whitelist()
-def apply_review(service_report, fixes):
-	"""Apply review fixes to work descriptions and save."""
+def apply_review(service_report, fixes, all_decisions=None):
+	"""Apply review fixes and log AI review decisions."""
 	import json
 
 	doc = frappe.get_doc('Service Report', service_report)
@@ -186,9 +186,39 @@ def apply_review(service_report, fixes):
 					setattr(doc.work[idx], attr, suggested)
 					applied += 1
 
+	# Log AI review decisions
+	if all_decisions:
+		decisions = json.loads(all_decisions) if isinstance(all_decisions, str) else all_decisions
+		review_data = json.dumps({
+			'fixes': [d.get('fix', {}) for d in decisions]
+		}, ensure_ascii=False)
+		user_decisions = json.dumps({
+			'decisions': [{
+				'field': d.get('fix', {}).get('field', ''),
+				'accepted': d.get('accepted'),
+				'custom_text': d.get('custom_text')
+			} for d in decisions]
+		}, ensure_ascii=False)
+
+		accepted_count = sum(1 for d in decisions if d.get('accepted') is True)
+		rejected_count = sum(1 for d in decisions if d.get('accepted') is False)
+		hint_count = sum(1 for d in decisions if d.get('accepted') is None)
+
+		settings = frappe.get_single('Fieldservice Settings')
+		doc.append('ai_reviews', {
+			'timestamp': frappe.utils.now(),
+			'ai_model': getattr(settings, 'ai_model', '') or '',
+			'review_data': review_data,
+			'user_decisions': user_decisions,
+			'applied_count': accepted_count,
+			'rejected_count': rejected_count,
+			'hint_count': hint_count,
+		})
+
+	doc.flags.skip_validation = True
+	doc.save()
+
 	if applied:
-		doc.flags.skip_validation = True
-		doc.save()
 		frappe.msgprint(
 			_('{0} Beschreibung(en) korrigiert.').format(applied),
 			indicator='green'

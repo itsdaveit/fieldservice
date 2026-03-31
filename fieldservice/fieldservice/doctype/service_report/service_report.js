@@ -707,28 +707,38 @@ function show_review_dialog(frm, fixes_data, from_submit) {
         fields: [{fieldtype:'HTML', fieldname:'review_content', options:body}],
         primary_action_label: primary_label,
         primary_action: function() {
-            // Collect checked fixes, with custom text overrides
+            // Collect ALL decisions (accepted/rejected) for logging
             let selected_fixes = [];
+            let all_decisions = [];
+
             fixes.forEach(function(fix, index) {
                 let cb = d.$wrapper.find('input[data-fix-index="'+index+'"]');
-                if (!cb.length || !cb.is(':checked')) return;
+                let accepted = cb.length ? cb.is(':checked') : null;  // null for hints
 
-                // Check for custom text override (only if user changed it)
+                // Check for custom text override
+                let custom_text = null;
                 let custom_ta = d.$wrapper.find('textarea[data-custom-text-index="'+index+'"]');
+                let applied_fix = Object.assign({}, fix);
+
                 if (custom_ta.length) {
                     let current_val = custom_ta.val().trim();
                     let original_prefill = decodeURIComponent(custom_ta.attr('data-original-prefill') || '');
                     if (current_val && current_val !== original_prefill.trim()) {
-                        // User edited the text — convert to <p>• lines
+                        custom_text = current_val;
                         let lines = current_val.split('\n').filter(l => l.trim());
                         let html = lines.map(l => {
                             l = l.trim().replace(/^[\u2022\-]\s*/, '');
                             return '<p>\u2022 ' + l + '</p>';
                         }).join('');
-                        fix = Object.assign({}, fix, {suggested_value: html});
+                        applied_fix = Object.assign({}, fix, {suggested_value: html});
                     }
                 }
-                selected_fixes.push(fix);
+
+                all_decisions.push({fix: fix, accepted: accepted, custom_text: custom_text});
+
+                if (accepted) {
+                    selected_fixes.push(applied_fix);
+                }
             });
 
             if (selected_fixes.length === 0) {
@@ -758,7 +768,11 @@ function show_review_dialog(frm, fixes_data, from_submit) {
             } else {
                 frappe.call({
                     method: 'fieldservice.fieldservice.doctype.service_report.service_report.apply_review',
-                    args: {service_report:frm.doc.name, fixes:JSON.stringify(selected_fixes)},
+                    args: {
+                        service_report: frm.doc.name,
+                        fixes: JSON.stringify(selected_fixes),
+                        all_decisions: JSON.stringify(all_decisions)
+                    },
                     callback: function() { frm.reload_doc(); }
                 });
             }
@@ -766,6 +780,18 @@ function show_review_dialog(frm, fixes_data, from_submit) {
         secondary_action_label: secondary_label,
         secondary_action: function() {
             d.hide();
+            // Log all as rejected/dismissed
+            let dismissed = fixes.map(function(fix) {
+                return {fix: fix, accepted: false, custom_text: null};
+            });
+            frappe.call({
+                method: 'fieldservice.fieldservice.doctype.service_report.service_report.apply_review',
+                args: {
+                    service_report: frm.doc.name,
+                    fixes: '[]',
+                    all_decisions: JSON.stringify(dismissed)
+                }
+            });
             if (from_submit) {
                 frm.call('submit', {flags:{skip_review:true}}).then(() => frm.reload_doc());
             }
