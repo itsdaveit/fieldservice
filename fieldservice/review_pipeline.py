@@ -410,10 +410,12 @@ Techniker erstellen Service Reports nach erledigter Arbeit. Diese werden in Lief
 - Das Format ist <p>• Text</p> — behalte dieses Format exakt bei
 - Jeder Aufzählungspunkt bleibt ein eigener <p>• ...</p> Absatz
 
-### 3. Service-Typ bewerten
-Erkenne ob die Arbeit tatsächlich Remote oder Vor-Ort stattfand.
+### 3. Service-Typ bewerten (PRO POSITION, nicht global!)
+Bewerte den Service-Typ JEDER EINZELNEN Position unabhängig. Ein Report kann Positionen mit verschiedenen Service-Typen haben. Ändere NICHT den globalen Report-Typ — bewerte nur einzelne Positionen.
 Starke Vor-Ort-Indikatoren: "vor Ort", "VO", "Mitnahme", "mitgenommen", "aufgebaut", "ausgeliefert", "abgeholt", Verkabelung, Umzug, Einbau, "Serverraum"
-Starke Remote-Indikatoren: "TV Support" (TeamViewer), "Fernwartung", "TRMM", "Telefonat", reine Konfigurationsarbeiten
+Starke Remote-Indikatoren: "TV Support" (TeamViewer), "Fernwartung", "TRMM", "Telefonat", reine Konfigurationsarbeiten, Softwareentwicklung
+Hinweis: "Application Development" ist für reine Softwareentwicklung gedacht.
+Wenn eine Position keinen Service-Typ hat (None/undefined), gib als Hinweis an welcher Typ passend wäre.
 
 ### 4. Hardware-Hinweise
 Prüfe ob in den Arbeitspositionen Hardware erwähnt wird, die physisch bewegt wurde (aufgebaut, ausgetauscht, installiert, geliefert, mitgebracht, angeschlossen). Vergleiche mit der Liste der erfassten Artikel. Wenn Hardware in den Beschreibungen erwähnt wird, aber NICHT in den Artikeln erfasst ist, gib einen Hinweis.
@@ -442,16 +444,26 @@ Antworte NUR mit einem JSON-Objekt in exakt diesem Format (keine Markdown-Codebl
   ],
   "service_typ_bewertung": {
     "aktueller_typ": "Remote Service",
-    "empfohlener_typ": "On-Site Service",
+    "empfohlener_typ": "Remote Service",
     "konfidenz": "sicher",
-    "begruendung": "Kurze Begründung"
+    "begruendung": "Keine Änderung nötig"
   },
   "hinweise": [
     {
       "typ": "fehlende_hardware",
       "position_idx": 1,
-      "beschreibung": "SNOM M900 DECT-Basen und Mobilteile wurden aufgebaut/angeschlossen, aber kein Material auf dem Service Report erfasst.",
-      "erkannte_hardware": ["SNOM M900 DECT-Basen", "Mobilteile"]
+      "beschreibung": "DECT-Basen aufgebaut, aber kein Material erfasst.",
+      "erkannte_hardware": ["SNOM M900 DECT-Basen"]
+    },
+    {
+      "typ": "service_typ_position",
+      "position_idx": 6,
+      "beschreibung": "Position 6 beschreibt Vor-Ort-Arbeit, Service-Typ sollte 'On-Site Service' sein."
+    },
+    {
+      "typ": "fehlender_service_typ",
+      "position_idx": 3,
+      "beschreibung": "Position 3 hat keinen Service-Typ. Basierend auf dem Inhalt: Remote Service."
     }
   ]
 }
@@ -460,8 +472,11 @@ Regeln:
 - "titel_korrektur.aenderungen" ist leer wenn der Titel korrekt ist
 - "idx" ist 1-basiert (Position 1 = idx 1)
 - "korrigierter_text" muss im <p>• Text</p> HTML-Format sein
-- "hinweise" enthält Hinweise auf mögliche Probleme (leeres Array wenn keine)
-- "hinweise[].typ" kann sein: "fehlende_hardware", "sonstiger_hinweis"
+- "service_typ_bewertung" bezieht sich NUR auf den globalen Report-Typ. Ändere ihn NICHT wegen einzelner abweichender Positionen! Nur ändern wenn ALLE Positionen einen anderen Typ haben.
+- "hinweise" enthält Hinweise auf Probleme (leeres Array wenn keine)
+- "hinweise[].typ" kann sein: "fehlende_hardware", "service_typ_position", "fehlender_service_typ", "sonstiger_hinweis"
+- "service_typ_position": wenn eine Position den falschen Service-Typ hat
+- "fehlender_service_typ": wenn eine Position keinen Service-Typ hat (None/undefined)
 - "hinweise[].position_idx" ist der 1-basierte Index der betroffenen Position (0 wenn global)\
 """
 
@@ -538,7 +553,7 @@ LLM_RESPONSE_SCHEMA = {
                 "properties": {
                     "typ": {
                         "type": "string",
-                        "enum": ["fehlende_hardware", "sonstiger_hinweis"],
+                        "enum": ["fehlende_hardware", "service_typ_position", "fehlender_service_typ", "sonstiger_hinweis"],
                         "description": "Art des Hinweises"
                     },
                     "position_idx": {
@@ -604,7 +619,8 @@ class LLMTextCorrectionStep(ReviewStep):
             desc = self._get_current_value(f"work[{i}].description", work.description, previous_results)
             if desc:
                 plain = _strip_html(desc)
-                positions.append(f"**Position {i+1}** (Service-Typ: {getattr(work, 'service_type', 'unbekannt')}):\n{plain}")
+                svc = getattr(work, 'service_type', None) or 'NICHT GESETZT'
+                positions.append(f"**Position {i+1}** (Service-Typ: {svc}):\n{plain}")
 
         if not positions:
             return []
