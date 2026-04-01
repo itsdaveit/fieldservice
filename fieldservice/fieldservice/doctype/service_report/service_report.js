@@ -237,7 +237,7 @@ frappe.ui.form.on('Service Report', {
                 });
             }, __("Aktionen"));
 
-            frm.add_custom_button(__('🤖 KI-Textkorrektur'), function() {
+            frm.add_custom_button(__('🤖 KI-Check'), function() {
                 show_ai_loading();
                 frappe.call({
                     method: 'fieldservice.fieldservice.doctype.service_report.service_report.run_llm_review',
@@ -838,7 +838,7 @@ function show_ai_review_log(frm) {
         body += '<div style="text-align:center;padding:30px 20px;color:var(--text-muted);">';
         body += '<div style="font-size:32px;margin-bottom:10px;">📋</div>';
         body += '<div style="font-size:14px;">Noch keine KI-Reviews durchgeführt.</div>';
-        body += '<div style="font-size:12px;margin-top:6px;">Verwende den Button <strong>🤖 KI-Textkorrektur</strong> um eine Prüfung zu starten.</div>';
+        body += '<div style="font-size:12px;margin-top:6px;">Verwende den Button <strong>🤖 KI-Check</strong> um eine Prüfung zu starten.</div>';
         body += '</div>';
     }
 
