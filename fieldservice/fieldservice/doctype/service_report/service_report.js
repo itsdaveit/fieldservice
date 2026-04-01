@@ -807,6 +807,32 @@ function show_review_dialog(frm, fixes_data, from_submit) {
         }
     });
 
+    // Track if a decision was already made (primary or secondary action)
+    let decision_made = false;
+    let orig_primary = d.primary_action;
+    d.primary_action = function() { decision_made = true; orig_primary.call(d); };
+    let orig_secondary = d.secondary_action;
+    if (orig_secondary) {
+        d.secondary_action = function() { decision_made = true; orig_secondary.call(d); };
+    }
+
+    // If dialog closed without action (X button), log as dismissed
+    d.on_hide = function() {
+        if (!decision_made) {
+            let dismissed = fixes.map(function(fix) {
+                return {fix: fix, accepted: false, custom_text: null};
+            });
+            frappe.call({
+                method: 'fieldservice.fieldservice.doctype.service_report.service_report.apply_review',
+                args: {
+                    service_report: frm.doc.name,
+                    fixes: '[]',
+                    all_decisions: JSON.stringify(dismissed)
+                }
+            });
+        }
+    };
+
     d.$wrapper.find('.modal-dialog').css('max-width', '960px');
     d.show();
 
