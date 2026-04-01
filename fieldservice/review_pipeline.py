@@ -635,6 +635,8 @@ class LLMTextCorrectionStep(ReviewStep):
             "input_schema": LLM_RESPONSE_SCHEMA,
         }
 
+        import frappe
+
         try:
             message = client.messages.create(
                 model=self.model,
@@ -645,11 +647,11 @@ class LLMTextCorrectionStep(ReviewStep):
                 tool_choice={"type": "tool", "name": "submit_review"},
             )
         except anthropic.APITimeoutError:
-            raise Exception("Die KI-Anfrage hat zu lange gedauert. Bitte versuche es erneut — bei umfangreichen Service Reports kann die Verarbeitung etwas länger dauern.")
+            frappe.throw("Die KI-Anfrage hat zu lange gedauert. Bitte versuche es erneut — bei umfangreichen Service Reports kann die Verarbeitung etwas länger dauern.", title="KI-Zeitüberschreitung")
         except anthropic.APIConnectionError:
-            raise Exception("Verbindung zur KI konnte nicht hergestellt werden. Bitte prüfe die Internetverbindung und versuche es erneut.")
+            frappe.throw("Verbindung zur KI konnte nicht hergestellt werden. Bitte prüfe die Internetverbindung und versuche es erneut.", title="KI-Verbindungsfehler")
         except anthropic.APIStatusError as e:
-            raise Exception(f"KI-Fehler: {e.message}")
+            frappe.throw(f"KI-Fehler: {e.message}", title="KI-Fehler")
 
         # Extract structured data from tool use response
         data = None
