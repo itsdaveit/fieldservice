@@ -795,54 +795,15 @@ function show_review_dialog(frm, fixes_data, from_submit) {
         secondary_action_label: secondary_label,
         secondary_action: function() {
             d.hide();
-            // Log all as rejected/dismissed (with delay to avoid deadlock)
-            let dismissed = fixes.map(function(fix) {
-                return {fix: fix, accepted: false, custom_text: null};
-            });
-            setTimeout(function() {
-                frappe.call({
-                    method: 'fieldservice.fieldservice.doctype.service_report.service_report.apply_review',
-                    args: {
-                        service_report: frm.doc.name,
-                        fixes: '[]',
-                        all_decisions: JSON.stringify(dismissed)
-                    }
-                });
-            }, 1500);
+            // pending_user_decision status in the log already documents the dismissal
             if (from_submit) {
                 frm.call('submit', {flags:{skip_review:true}}).then(() => frm.reload_doc());
             }
         }
     });
 
-    // Track if a decision was already made (primary or secondary action)
-    let decision_made = false;
-    let orig_primary = d.primary_action;
-    d.primary_action = function() { decision_made = true; orig_primary.call(d); };
-    let orig_secondary = d.secondary_action;
-    if (orig_secondary) {
-        d.secondary_action = function() { decision_made = true; orig_secondary.call(d); };
-    }
-
-    // If dialog closed without action (X button), log as dismissed
-    d.on_hide = function() {
-        if (!decision_made) {
-            let dismissed = fixes.map(function(fix) {
-                return {fix: fix, accepted: false, custom_text: null};
-            });
-            // Small delay to avoid deadlock with run_llm_review's save
-            setTimeout(function() {
-                frappe.call({
-                    method: 'fieldservice.fieldservice.doctype.service_report.service_report.apply_review',
-                    args: {
-                        service_report: frm.doc.name,
-                        fixes: '[]',
-                        all_decisions: JSON.stringify(dismissed)
-                    }
-                });
-            }, 1500);
-        }
-    };
+    // No server calls on dismiss/close — the pending_user_decision
+    // status logged by run_llm_review already documents the interaction
 
     d.$wrapper.find('.modal-dialog').css('max-width', '960px');
     d.show();
