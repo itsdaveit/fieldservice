@@ -789,18 +789,20 @@ function show_review_dialog(frm, fixes_data, from_submit) {
         secondary_action_label: secondary_label,
         secondary_action: function() {
             d.hide();
-            // Log all as rejected/dismissed
+            // Log all as rejected/dismissed (with delay to avoid deadlock)
             let dismissed = fixes.map(function(fix) {
                 return {fix: fix, accepted: false, custom_text: null};
             });
-            frappe.call({
-                method: 'fieldservice.fieldservice.doctype.service_report.service_report.apply_review',
-                args: {
-                    service_report: frm.doc.name,
-                    fixes: '[]',
-                    all_decisions: JSON.stringify(dismissed)
-                }
-            });
+            setTimeout(function() {
+                frappe.call({
+                    method: 'fieldservice.fieldservice.doctype.service_report.service_report.apply_review',
+                    args: {
+                        service_report: frm.doc.name,
+                        fixes: '[]',
+                        all_decisions: JSON.stringify(dismissed)
+                    }
+                });
+            }, 1500);
             if (from_submit) {
                 frm.call('submit', {flags:{skip_review:true}}).then(() => frm.reload_doc());
             }
@@ -822,14 +824,17 @@ function show_review_dialog(frm, fixes_data, from_submit) {
             let dismissed = fixes.map(function(fix) {
                 return {fix: fix, accepted: false, custom_text: null};
             });
-            frappe.call({
-                method: 'fieldservice.fieldservice.doctype.service_report.service_report.apply_review',
-                args: {
-                    service_report: frm.doc.name,
-                    fixes: '[]',
-                    all_decisions: JSON.stringify(dismissed)
-                }
-            });
+            // Small delay to avoid deadlock with run_llm_review's save
+            setTimeout(function() {
+                frappe.call({
+                    method: 'fieldservice.fieldservice.doctype.service_report.service_report.apply_review',
+                    args: {
+                        service_report: frm.doc.name,
+                        fixes: '[]',
+                        all_decisions: JSON.stringify(dismissed)
+                    }
+                });
+            }, 1500);
         }
     };
 
