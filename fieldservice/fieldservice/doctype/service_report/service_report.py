@@ -159,7 +159,9 @@ def apply_review(service_report, fixes, all_decisions=None):
 	"""Apply review fixes and log AI review decisions."""
 	import json
 
+	# Reload to avoid deadlock with run_llm_review's save
 	doc = frappe.get_doc('Service Report', service_report)
+	doc.reload()
 	if isinstance(fixes, str):
 		fixes = json.loads(fixes)
 
