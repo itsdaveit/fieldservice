@@ -263,10 +263,16 @@ frappe.ui.form.on('Service Report', {
             }, __("Aktionen"));
         }
 
-        // Fix Frappe col-sm-20 bug on grid columns (known issue)
-        document.querySelectorAll('.form-column[class*="col-sm-20"]').forEach(el => {
-            el.classList.remove('col-sm-20');
-            el.classList.add('col-sm-12');
+        // Fix Frappe grid column width bug (known issue: col-sm gets wrong values after reload)
+        document.querySelectorAll('.form-column').forEach(el => {
+            let match = el.className.match(/col-sm-(\d+)/);
+            if (match) {
+                let val = parseInt(match[1]);
+                if (val > 12 || val < 4) {
+                    el.classList.remove('col-sm-' + val);
+                    el.classList.add('col-sm-12');
+                }
+            }
         });
 
         // Style Aktionen button like Sales Invoice (itsdave red)
