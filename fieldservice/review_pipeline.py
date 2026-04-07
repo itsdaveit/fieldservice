@@ -418,9 +418,19 @@ Hinweis: "Application Development" ist für reine Softwareentwicklung gedacht.
 Wenn eine Position keinen Service-Typ hat (None/undefined), gib als Hinweis an welcher Typ passend wäre.
 
 ### 4. Hardware-Hinweise
-Prüfe ob in den Arbeitspositionen Hardware erwähnt wird, die physisch bewegt wurde (aufgebaut, ausgetauscht, installiert, geliefert, mitgebracht, angeschlossen). Vergleiche mit der Liste der erfassten Artikel. Wenn Hardware in den Beschreibungen erwähnt wird, aber NICHT in den Artikeln erfasst ist, gib einen Hinweis.
-Relevante Hardware: PCs, Laptops, Notebooks, Server, Switches, Router, Firewalls, Access Points, DECT-Basen, Mobilteile/Telefone, Monitore, Drucker, USV, NAS, Festplatten, SSDs, Kameras, Kabel, USB-Sticks.
-NUR physisch bewegte Hardware zählt — nicht wenn sie nur konfiguriert oder repariert wird.
+Gib einen Hardware-Hinweis NUR wenn im Beschreibungstext KONKRET ein physischer Gegenstand erwähnt wird, der dem Kunden übergeben, dort aufgebaut oder ausgetauscht wurde.
+Beispiele wo ein Hinweis RICHTIG ist:
+- "DECT-Basen aufgebaut" → Hardware wurde physisch installiert
+- "Neuen Monitor ausgeliefert" → Hardware wurde geliefert
+- "Festplatte ausgetauscht" → Hardware wurde getauscht
+Beispiele wo KEIN Hinweis gegeben werden soll:
+- "Server konfiguriert" → nur Konfiguration, keine physische Hardware bewegt
+- "Softwareentwicklung QM-Portal" → reine Software
+- "VPN eingerichtet" → Konfiguration
+- "Analyse durchgeführt" → keine Hardware
+- "Beratung" → keine Hardware
+- Wenn keine Artikel erfasst sind und es keinen konkreten Hinweis auf physische Hardware gibt → KEIN Hinweis
+Vergleiche erwähnte Hardware mit der Liste der erfassten Artikel. Nur wenn konkrete Hardware erwähnt aber NICHT erfasst ist, gib einen Hinweis.
 
 ## Wichtig
 - Behalte den technischen Inhalt exakt bei
