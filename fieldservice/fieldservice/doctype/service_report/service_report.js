@@ -612,7 +612,7 @@ function show_review_dialog(frm, fixes_data, from_submit) {
         if (is_svc) {
             // Service type card with better layout
             body += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
-            body += '<input type="checkbox" checked data-fix-index="'+fix._index+'" style="width:18px;height:18px;cursor:pointer;accent-color:#ff9800;">';
+            body += '<input type="checkbox" checked data-fix-index="'+fix._index+'" style="width:18px;min-width:18px;height:18px;flex-shrink:0;cursor:pointer;accent-color:#ff9800;">';
             body += '<strong style="font-size:14px;">'+label+'</strong>';
             body += '</div>';
             // Begründung
@@ -624,7 +624,7 @@ function show_review_dialog(frm, fixes_data, from_submit) {
             body += '</div>';
         } else {
             body += '<div style="display:flex;align-items:center;margin-bottom:8px;">';
-            body += '<input type="checkbox" checked data-fix-index="'+fix._index+'" style="width:18px;height:18px;margin-right:10px;cursor:pointer;accent-color:#e73249;">';
+            body += '<input type="checkbox" checked data-fix-index="'+fix._index+'" style="width:18px;min-width:18px;height:18px;flex-shrink:0;margin-right:10px;cursor:pointer;accent-color:#e73249;">';
             body += '<strong>'+label+'</strong>'+badge_html;
             body += '<span style="color:var(--text-muted);margin-left:auto;font-size:12px;">'+fix.message+'</span>';
             body += '</div>';
@@ -660,7 +660,7 @@ function show_review_dialog(frm, fixes_data, from_submit) {
         if (has_desc) {
             let fix = group.desc;
             body += '<div style="display:flex;align-items:center;margin-bottom:6px;">';
-            body += '<input type="checkbox" checked data-fix-index="'+fix._index+'" style="width:18px;height:18px;margin-right:10px;cursor:pointer;accent-color:#e73249;">';
+            body += '<input type="checkbox" checked data-fix-index="'+fix._index+'" style="width:18px;min-width:18px;height:18px;flex-shrink:0;margin-right:10px;cursor:pointer;accent-color:#e73249;">';
             body += '<span style="background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:10px;font-size:11px;">Textkorrektur</span>';
             body += '<span style="color:var(--text-muted);margin-left:auto;font-size:12px;">'+fix.message+'</span>';
             body += '</div>';
@@ -679,7 +679,7 @@ function show_review_dialog(frm, fixes_data, from_submit) {
         if (has_svc) {
             let fix = group.svc;
             body += '<div style="'+(has_desc?'margin-top:10px;padding-top:10px;border-top:1px dashed #ddd;':'')+'display:flex;align-items:center;margin-bottom:6px;">';
-            body += '<input type="checkbox" checked data-fix-index="'+fix._index+'" style="width:18px;height:18px;margin-right:10px;cursor:pointer;accent-color:#ff9800;">';
+            body += '<input type="checkbox" checked data-fix-index="'+fix._index+'" style="width:18px;min-width:18px;height:18px;flex-shrink:0;margin-right:10px;cursor:pointer;accent-color:#ff9800;">';
             body += '<span style="background:#fff3e0;color:#e65100;padding:2px 8px;border-radius:10px;font-size:11px;">Service-Typ</span>';
             body += '<span style="color:var(--text-muted);margin-left:auto;font-size:12px;">'+fix.message+'</span>';
             body += '</div>';
