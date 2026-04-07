@@ -794,6 +794,35 @@ class LLMTextCorrectionStep(ReviewStep):
             beschreibung = hinweis.get("beschreibung", "")
             hardware = hinweis.get("erkannte_hardware", [])
 
+            if typ in ("service_typ_position", "fehlender_service_typ") and pos_idx > 0:
+                # Extract suggested service type from description text
+                suggested_type = None
+                for st in ("On-Site Service", "Remote Service", "Application Development"):
+                    if st.lower() in beschreibung.lower() or st in beschreibung:
+                        suggested_type = st
+                        break
+                if not suggested_type:
+                    if "vor ort" in beschreibung.lower() or "vor-ort" in beschreibung.lower():
+                        suggested_type = "On-Site Service"
+                    elif "remote" in beschreibung.lower():
+                        suggested_type = "Remote Service"
+                    elif "entwicklung" in beschreibung.lower() or "development" in beschreibung.lower():
+                        suggested_type = "Application Development"
+
+                if suggested_type:
+                    work_idx = pos_idx - 1
+                    current_type = getattr(doc.work[work_idx], 'service_type', None) if work_idx < len(doc.work) else None
+                    if suggested_type != current_type:
+                        results.append(ReviewResult(
+                            step_name=self.name,
+                            field=f"work[{work_idx}].service_type",
+                            original_value=current_type or "NICHT GESETZT",
+                            suggested_value=suggested_type,
+                            change_type="suggestion",
+                            message=f"Service-Typ Position {pos_idx}: {beschreibung}",
+                        ))
+                        continue  # Don't also add as hint
+
             if typ == "fehlende_hardware" and hardware:
                 hw_list = ", ".join(hardware)
                 message = f"Möglicherweise fehlendes Material: {hw_list}"
