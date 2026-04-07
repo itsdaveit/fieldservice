@@ -410,12 +410,14 @@ Techniker erstellen Service Reports nach erledigter Arbeit. Diese werden in Lief
 - Das Format ist <p>• Text</p> — behalte dieses Format exakt bei
 - Jeder Aufzählungspunkt bleibt ein eigener <p>• ...</p> Absatz
 
-### 3. Service-Typ bewerten (PRO POSITION, nicht global!)
-Bewerte den Service-Typ JEDER EINZELNEN Position unabhängig. Ein Report kann Positionen mit verschiedenen Service-Typen haben. Ändere NICHT den globalen Report-Typ — bewerte nur einzelne Positionen.
+### 3. Service-Typ bewerten (NUR PRO POSITION!)
+Bewerte den Service-Typ JEDER EINZELNEN Position unabhängig. Ein Report kann Positionen mit verschiedenen Service-Typen haben.
+WICHTIG: Der globale Report-Typ (service_typ_bewertung) ist NUR ein Default für neue Positionen und hat KEINE Auswirkung auf bestehende. Ändere ihn NICHT. Setze empfohlener_typ = aktueller_typ.
+Nutze stattdessen das Feld "service_typ_empfehlung" in korrekturen[] für JEDE Position die einen falschen Service-Typ hat.
 Starke Vor-Ort-Indikatoren: "vor Ort", "VO", "Mitnahme", "mitgenommen", "aufgebaut", "ausgeliefert", "abgeholt", Verkabelung, Umzug, Einbau, "Serverraum"
-Starke Remote-Indikatoren: "TV Support" (TeamViewer), "Fernwartung", "TRMM", "Telefonat", reine Konfigurationsarbeiten, Softwareentwicklung
+Starke Remote-Indikatoren: "TV Support" (TeamViewer), "Fernwartung", "TRMM", "Telefonat", reine Konfigurationsarbeiten
 Hinweis: "Application Development" ist für reine Softwareentwicklung gedacht.
-Wenn eine Position keinen Service-Typ hat (None/undefined), gib als Hinweis an welcher Typ passend wäre.
+Sei KONSERVATIV: Ändere den Service-Typ nur wenn der Text EINDEUTIG auf einen anderen Typ hinweist. "Aufbau" von Hardware ist eindeutig On-Site. Aber "Provisionieren" oder "Einrichten" ALLEIN ist kein On-Site-Indikator — das kann auch remote passieren.
 
 ### 4. Hardware-Hinweise
 Gib einen Hardware-Hinweis NUR wenn im Beschreibungstext KONKRET ein physischer Gegenstand erwähnt wird, der dem Kunden übergeben, dort aufgebaut oder ausgetauscht wurde.
@@ -801,21 +803,9 @@ class LLMTextCorrectionStep(ReviewStep):
                         message=f"Service-Typ: {svc.get('begruendung', '')}",
                     ))
 
-        # --- Global service type warning (fallback) ---
-        typ_bew = data.get("service_typ_bewertung") or {}
-        if (isinstance(typ_bew, dict) and typ_bew.get("empfohlener_typ") and
-                typ_bew.get("empfohlener_typ") != typ_bew.get("aktueller_typ") and
-                typ_bew.get("konfidenz") in ("sicher", "wahrscheinlich")):
-            # Only add if no per-position service type results exist
-            has_per_pos = any(r.field.endswith('.service_type') for r in results)
-            if not has_per_pos:
-                results.append(ReviewResult(
-                    step_name=self.name, field="report_type",
-                    original_value=typ_bew.get("aktueller_typ", ""),
-                    suggested_value=typ_bew.get("empfohlener_typ", ""),
-                    change_type="suggestion",
-                    message=f"Service-Typ: {typ_bew.get('begruendung', '')}",
-                ))
+        # Global service_typ_bewertung is intentionally ignored —
+        # the global report type only affects new positions, not existing ones.
+        # Service type corrections are handled per-position via korrekturen[].service_typ_empfehlung
 
         # --- Hinweise (fehlende Hardware etc.) ---
         for hinweis in (data.get("hinweise") or []):
