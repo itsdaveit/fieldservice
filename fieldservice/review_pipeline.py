@@ -439,7 +439,8 @@ Antworte NUR mit einem JSON-Objekt in exakt diesem Format (keine Markdown-Codebl
     {
       "idx": 1,
       "korrigierter_text": "<p>• Korrigierter Text</p><p>• Zweiter Punkt</p>",
-      "aenderungen": ["rechtschreibung", "grammatik"]
+      "aenderungen": ["rechtschreibung", "grammatik"],
+      "service_typ_empfehlung": "On-Site Service"
     }
   ],
   "service_typ_bewertung": {
@@ -472,7 +473,9 @@ Regeln:
 - "titel_korrektur.aenderungen" ist leer wenn der Titel korrekt ist
 - "idx" ist 1-basiert (Position 1 = idx 1)
 - "korrigierter_text" muss im <p>• Text</p> HTML-Format sein
-- "service_typ_bewertung" bezieht sich NUR auf den globalen Report-Typ. Ändere ihn NICHT wegen einzelner abweichender Positionen! Nur ändern wenn ALLE Positionen einen anderen Typ haben.
+- "service_typ_empfehlung" in korrekturen: NUR setzen wenn der Service-Typ der Position falsch ist. Jede Position kann einen eigenen Service-Typ haben (Remote, On-Site, Application Development)
+- "service_typ_bewertung" bezieht sich NUR auf den globalen Report-Typ. Ändere ihn NICHT wegen einzelner abweichender Positionen! Nur ändern wenn ALLE oder die meisten Positionen einen anderen Typ haben.
+- WICHTIG: Wenn eine Position auch OHNE Textkorrektur einen falschen Service-Typ hat, trotzdem in "korrekturen" aufnehmen — mit dem unveränderten korrigierter_text und leeren aenderungen, aber mit service_typ_empfehlung.
 - "hinweise" enthält Hinweise auf Probleme (leeres Array wenn keine)
 - "hinweise[].typ" kann sein: "fehlende_hardware", "service_typ_position", "fehlender_service_typ", "sonstiger_hinweis"
 - "service_typ_position": wenn eine Position den falschen Service-Typ hat
@@ -519,6 +522,11 @@ LLM_RESPONSE_SCHEMA = {
                         "type": "array",
                         "items": {"type": "string"},
                         "description": "Art der Änderungen: rechtschreibung, grammatik, grossschreibung, formulierung"
+                    },
+                    "service_typ_empfehlung": {
+                        "type": "string",
+                        "enum": ["Remote Service", "On-Site Service", "Application Development"],
+                        "description": "Empfohlener Service-Typ für diese Position, wenn er vom aktuellen abweicht. Nur angeben wenn eine Änderung nötig ist."
                     }
                 }
             }
@@ -738,13 +746,11 @@ class LLMTextCorrectionStep(ReviewStep):
                 if isinstance(beschreibung, dict):
                     suggested = beschreibung.get("korrigiert", "")
 
-            if not suggested:
-                continue
-
+            # Process text correction (if any)
             field_key = f"work[{idx}].description"
             current = self._get_current_value(field_key, doc.work[idx].description, previous_results)
 
-            if suggested != current:
+            if suggested and suggested != current:
                 aenderungen = korr.get("aenderungen", [])
                 if not aenderungen and isinstance(korr.get("beschreibung"), dict):
                     if korr["beschreibung"].get("benoetigt_korrektur"):
@@ -757,17 +763,33 @@ class LLMTextCorrectionStep(ReviewStep):
                     message=f"Position {idx+1}: " + ", ".join(msg_parts),
                 ))
 
-            # Service type per position — link to work[idx].service_type
+            # Service type per position — from korrekturen[].service_typ_empfehlung
+            svc_empf = korr.get("service_typ_empfehlung")
+            if svc_empf:
+                current_svc = getattr(doc.work[idx], 'service_type', None) if idx < len(doc.work) else None
+                if svc_empf != current_svc:
+                    results.append(ReviewResult(
+                        step_name=self.name,
+                        field=f"work[{idx}].service_type",
+                        original_value=current_svc or "NICHT GESETZT",
+                        suggested_value=svc_empf,
+                        change_type="suggestion",
+                        message=f"Service-Typ Position {idx+1}",
+                    ))
+
+            # Legacy: service_typ dict from older response format
             svc = korr.get("service_typ")
             if isinstance(svc, dict) and svc.get("benoetigt_aenderung"):
-                results.append(ReviewResult(
-                    step_name=self.name,
-                    field=f"work[{idx}].service_type",
-                    original_value=svc.get("original", ""),
-                    suggested_value=svc.get("empfohlen", ""),
-                    change_type="suggestion",
-                    message=f"Service-Typ: {svc.get('begruendung', '')}",
-                ))
+                current_svc = getattr(doc.work[idx], 'service_type', None) if idx < len(doc.work) else None
+                if svc.get("empfohlen") != current_svc:
+                    results.append(ReviewResult(
+                        step_name=self.name,
+                        field=f"work[{idx}].service_type",
+                        original_value=svc.get("original", current_svc or ""),
+                        suggested_value=svc.get("empfohlen", ""),
+                        change_type="suggestion",
+                        message=f"Service-Typ: {svc.get('begruendung', '')}",
+                    ))
 
         # --- Global service type warning (fallback) ---
         typ_bew = data.get("service_typ_bewertung") or {}
