@@ -816,34 +816,44 @@ class LLMTextCorrectionStep(ReviewStep):
             beschreibung = hinweis.get("beschreibung", "")
             hardware = hinweis.get("erkannte_hardware", [])
 
-            if typ in ("service_typ_position", "fehlender_service_typ") and pos_idx > 0:
-                # Extract suggested service type from description text
-                suggested_type = None
-                for st in ("On-Site Service", "Remote Service", "Application Development"):
-                    if st.lower() in beschreibung.lower() or st in beschreibung:
-                        suggested_type = st
-                        break
-                if not suggested_type:
-                    if "vor ort" in beschreibung.lower() or "vor-ort" in beschreibung.lower():
-                        suggested_type = "On-Site Service"
-                    elif "remote" in beschreibung.lower():
-                        suggested_type = "Remote Service"
-                    elif "entwicklung" in beschreibung.lower() or "development" in beschreibung.lower():
-                        suggested_type = "Application Development"
+            # Check if this hint is about a wrong service type on a position
+            # Convert to actionable suggestion if we can determine the right type
+            if pos_idx > 0:
+                desc_lower = beschreibung.lower()
+                is_svc_hint = (
+                    typ in ("service_typ_position", "fehlender_service_typ")
+                    or "service-typ" in desc_lower
+                    or "service typ" in desc_lower
+                    or ("vor-ort" in desc_lower and ("remote" in desc_lower or "widersprüchlich" in desc_lower or "falsch" in desc_lower))
+                    or ("vor ort" in desc_lower and ("remote" in desc_lower or "typischerweise" in desc_lower))
+                )
 
-                if suggested_type:
-                    work_idx = pos_idx - 1
-                    current_type = getattr(doc.work[work_idx], 'service_type', None) if work_idx < len(doc.work) else None
-                    if suggested_type != current_type:
-                        results.append(ReviewResult(
-                            step_name=self.name,
-                            field=f"work[{work_idx}].service_type",
-                            original_value=current_type or "NICHT GESETZT",
-                            suggested_value=suggested_type,
-                            change_type="suggestion",
-                            message=f"Service-Typ Position {pos_idx}: {beschreibung}",
-                        ))
-                        continue  # Don't also add as hint
+                if is_svc_hint:
+                    suggested_type = None
+                    # Determine what service type the hint suggests
+                    if "vor ort" in desc_lower or "vor-ort" in desc_lower or "on-site" in desc_lower or "physisch" in desc_lower:
+                        suggested_type = "On-Site Service"
+                    elif "remote" in desc_lower and "nicht remote" not in desc_lower:
+                        # Only if it suggests Remote, not if it says "is not Remote"
+                        pass
+                    for st in ("On-Site Service", "Remote Service", "Application Development"):
+                        if st in beschreibung:
+                            suggested_type = st
+                            break
+
+                    if suggested_type:
+                        work_idx = pos_idx - 1
+                        current_type = getattr(doc.work[work_idx], 'service_type', None) if work_idx < len(doc.work) else None
+                        if suggested_type != current_type:
+                            results.append(ReviewResult(
+                                step_name=self.name,
+                                field=f"work[{work_idx}].service_type",
+                                original_value=current_type or "NICHT GESETZT",
+                                suggested_value=suggested_type,
+                                change_type="suggestion",
+                                message=f"Service-Typ Position {pos_idx}: {beschreibung}",
+                            ))
+                            continue  # Don't also add as hint
 
             if typ == "fehlende_hardware" and hardware:
                 hw_list = ", ".join(hardware)
