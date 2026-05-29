@@ -168,20 +168,23 @@ frappe.ui.form.on('Service Report', {
             frm.disable_save();
         };
        
-        frappe.call({
-            method: "frappe.client.get_value",
-            args: {
-                doctype: "OTRSConnect User Settings",
-                fieldname: ["zoom_link"]
-            },
-            callback(r) {
-                if(r.message && frm.doc.ofork_ticket_number) {
-                    console.log(r.message);
-                    frm.add_custom_button(__('OTRS Ticket Zoom'), function() {
-                        window.open(r.message["zoom_link"] + frm.doc.ofork_ticket_number, '_blank');
-                    }, __("Ofork Ticket"));
+        // OTRS Zoom button only when the otrsconnect app (OTRSConnect User Settings) is installed
+        frappe.db.exists("DocType", "OTRSConnect User Settings").then((otrs_installed) => {
+            if (!otrs_installed) return;
+            frappe.call({
+                method: "frappe.client.get_value",
+                args: {
+                    doctype: "OTRSConnect User Settings",
+                    fieldname: ["zoom_link"]
+                },
+                callback(r) {
+                    if(r.message && frm.doc.ofork_ticket_number) {
+                        frm.add_custom_button(__('OTRS Ticket Zoom'), function() {
+                            window.open(r.message["zoom_link"] + frm.doc.ofork_ticket_number, '_blank');
+                        }, __("Ofork Ticket"));
+                    }
                 }
-            }
+            });
         });
 
         // Button to set selected rows to "Without Surcharge"
