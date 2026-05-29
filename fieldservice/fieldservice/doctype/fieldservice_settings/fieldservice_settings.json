@@ -7,6 +7,8 @@
  "engine": "InnoDB",
  "field_order": [
   "max_work_duration",
+  "invoicing_section",
+  "service_item_groups",
   "review_section",
   "review_mode",
   "ai_review_section",
@@ -22,6 +24,18 @@
    "fieldname": "max_work_duration",
    "fieldtype": "Int",
    "label": "Max Work Duration"
+  },
+  {
+   "fieldname": "invoicing_section",
+   "fieldtype": "Section Break",
+   "label": "Rechnungsstellung"
+  },
+  {
+   "fieldname": "service_item_groups",
+   "fieldtype": "Table",
+   "label": "Dienstleistungs-Artikelgruppen",
+   "options": "Fieldservice Service Item Group",
+   "description": "Artikelgruppen, die bei der Sammel-Rechnungserstellung als Dienstleistung (statt Ware) gruppiert werden. Leer = Standard: Dienstleistungen, Anfahrten, Arbeitszeiten Techniker, Anwendungsentwicklung."
   },
   {
    "fieldname": "review_section",
@@ -73,7 +87,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-04-03 21:53:40.399703",
+ "modified": "2026-05-29 11:10:00.000000",
  "modified_by": "Administrator",
  "module": "Fieldservice",
  "name": "Fieldservice Settings",

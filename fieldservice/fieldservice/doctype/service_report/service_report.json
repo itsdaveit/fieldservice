@@ -51,7 +51,6 @@
   "aditional_info_section",
   "timer_status",
   "timer_start",
-  "ofork_ticket_number",
   "ai_reviews_section",
   "ai_reviews"
  ],
@@ -328,11 +327,6 @@
    "options": "<p style=\"text-align: center;\">Unterschrift Kunde</p>"
   },
   {
-   "fieldname": "ofork_ticket_number",
-   "fieldtype": "Data",
-   "label": "Ofork Ticket Number"
-  },
-  {
    "collapsible": 1,
    "fieldname": "ai_reviews_section",
    "fieldtype": "Section Break",
@@ -350,7 +344,7 @@
  "grid_page_length": 50,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-29 10:00:00.000000",
+ "modified": "2026-05-29 11:05:00.000000",
  "modified_by": "b.trzensiok@itsdave.de",
  "module": "Fieldservice",
  "name": "Service Report",

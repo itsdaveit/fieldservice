@@ -8,6 +8,23 @@ from erpnext.accounts.party import set_taxes as party_st
 from erpnext.stock.doctype.delivery_note.delivery_note import make_sales_invoice
 from frappe import ValidationError, _
 
+DEFAULT_SERVICE_ITEM_GROUPS = [
+	"Dienstleistungen", "Anfahrten", "Arbeitszeiten Techniker", "Anwendungsentwicklung",
+]
+
+
+def get_service_item_groups():
+	"""Item groups billed as service (not goods) when grouping invoices.
+	Configurable via Fieldservice Settings; falls back to the defaults when unset.
+	Cached per request via frappe.flags."""
+	cached = getattr(frappe.flags, "fs_service_item_groups", None)
+	if cached is None:
+		rows = frappe.get_single("Fieldservice Settings").get("service_item_groups") or []
+		cached = [r.item_group for r in rows if r.item_group] or list(DEFAULT_SERVICE_ITEM_GROUPS)
+		frappe.flags.fs_service_item_groups = cached
+	return cached
+
+
 class InvoicesfromDeliveryNotes(Document):
 
 	@frappe.whitelist()
@@ -125,7 +142,7 @@ class InvoicesfromDeliveryNotes(Document):
 						print(dn["name"])
 						print(item.qty)
 						print(item.uom)
-						if item.item_group == "Dienstleistungen" or item.item_group == "Anfahrten" or item.item_group == "Arbeitszeiten Techniker" or item.item_group == "Anwendungsentwicklung":
+						if item.item_group in get_service_item_groups():
 							service_items.append(invoice_doc_item)
 						elif item.against_sales_order:
 							sales_order_items.append(invoice_doc_item)

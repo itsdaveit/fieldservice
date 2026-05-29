@@ -390,7 +390,7 @@ class CapitalizationStep(ReviewStep):
 # ---------------------------------------------------------------------------
 
 DEFAULT_AI_SYSTEM_PROMPT = """\
-Du bist ein Qualitätsprüfer für Service-Reports eines IT-Dienstleisters (itsdave GmbH).
+Du bist ein Qualitätsprüfer für Service-Reports eines Dienstleisters.
 
 Techniker erstellen Service Reports nach erledigter Arbeit. Diese werden in Lieferscheine überführt, die an Kunden gehen. Du prüfst und korrigierst die Texte, bevor sie den Kunden erreichen.
 

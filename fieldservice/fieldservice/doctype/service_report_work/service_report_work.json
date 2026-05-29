@@ -15,11 +15,7 @@
   "address",
   "ignore_surcharges",
   "without_surcharge_reason",
-  "internal_remarks",
-  "otrs_ticket_section",
-  "otrs_ticket",
-  "column_break_vknh",
-  "otrs_article"
+  "internal_remarks"
  ],
  "fields": [
   {
@@ -96,31 +92,12 @@
    "fieldname": "without_surcharge_reason",
    "fieldtype": "Small Text",
    "label": "Without Surcharge Reason"
-  },
-  {
-   "fieldname": "otrs_ticket_section",
-   "fieldtype": "Section Break",
-   "label": "OTRS Ticket"
-  },
-  {
-   "fieldname": "otrs_ticket",
-   "fieldtype": "Data",
-   "label": "OTRS Ticket"
-  },
-  {
-   "fieldname": "column_break_vknh",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "otrs_article",
-   "fieldtype": "Data",
-   "label": "OTRS Article"
   }
  ],
  "grid_page_length": 50,
  "istable": 1,
  "links": [],
- "modified": "2026-03-31 22:19:15.312571",
+ "modified": "2026-05-29 11:00:00.000000",
  "modified_by": "D.Malinowski@itsdave.de",
  "module": "Fieldservice",
  "name": "Service Report Work",

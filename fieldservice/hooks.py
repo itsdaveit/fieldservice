@@ -4,7 +4,7 @@ from . import __version__ as app_version
 
 app_name = "fieldservice"
 app_title = "Fieldservice"
-app_publisher = "itsdve GmbH"
+app_publisher = "Fieldservice"
 app_description = "manage field service"
 app_icon = "octicon octicon-file-directory"
 app_color = "grey"

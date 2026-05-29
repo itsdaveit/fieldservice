@@ -167,25 +167,6 @@ frappe.ui.form.on('Service Report', {
             frm.change_custom_button_type("Stop Timer", null, "danger");
             frm.disable_save();
         };
-       
-        // OTRS Zoom button only when the otrsconnect app (OTRSConnect User Settings) is installed
-        frappe.db.exists("DocType", "OTRSConnect User Settings").then((otrs_installed) => {
-            if (!otrs_installed) return;
-            frappe.call({
-                method: "frappe.client.get_value",
-                args: {
-                    doctype: "OTRSConnect User Settings",
-                    fieldname: ["zoom_link"]
-                },
-                callback(r) {
-                    if(r.message && frm.doc.ofork_ticket_number) {
-                        frm.add_custom_button(__('OTRS Ticket Zoom'), function() {
-                            window.open(r.message["zoom_link"] + frm.doc.ofork_ticket_number, '_blank');
-                        }, __("Ofork Ticket"));
-                    }
-                }
-            });
-        });
 
         // Button to set selected rows to "Without Surcharge"
         frm.add_custom_button(__('🚫 Selektierte ohne Zuschlag'), function() {
@@ -287,17 +268,6 @@ frappe.ui.form.on('Service Report', {
                 }
             }
         });
-
-        // Style Aktionen button like Sales Invoice (itsdave red)
-        setTimeout(() => {
-            frm.$wrapper
-                .find('.inner-group-button[data-label="' + __("Aktionen") + '"] > .btn')
-                .css({
-                    "background-color": "#e73249",
-                    "border-color": "#e73249",
-                    "color": "#fff",
-                });
-        }, 100);
 
     },
 
