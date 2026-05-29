@@ -6,7 +6,9 @@
  "engine": "InnoDB",
  "field_order": [
   "begin",
+  "column_break_begin_end",
   "end",
+  "section_break_description",
   "description",
   "aditional_info_section",
   "hours",
@@ -38,6 +40,14 @@
    "print_width": "100"
   },
   {
+   "fieldname": "column_break_begin_end",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_description",
+   "fieldtype": "Section Break"
+  },
+  {
    "columns": 5,
    "fieldname": "description",
    "fieldtype": "Text Editor",
@@ -46,7 +56,6 @@
    "print_width": "410"
   },
   {
-   "columns": 5,
    "columns": 1,
    "fieldname": "hours",
    "fieldtype": "Float",
@@ -116,7 +125,7 @@
  "grid_page_length": 50,
  "istable": 1,
  "links": [],
- "modified": "2026-05-29 14:55:00.000000",
+ "modified": "2026-05-29 15:05:00.000000",
  "modified_by": "D.Malinowski@itsdave.de",
  "module": "Fieldservice",
  "name": "Service Report Work",

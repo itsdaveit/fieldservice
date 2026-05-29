@@ -222,6 +222,7 @@
    "read_only": 1
   },
   {
+   "collapsible": 1,
    "fieldname": "mandatory_section_section",
    "fieldtype": "Section Break",
    "label": "Mandatory Section"
@@ -231,7 +232,8 @@
    "fieldname": "delivery_note",
    "fieldtype": "Link",
    "label": "Delivery Note",
-   "options": "Delivery Note"
+   "options": "Delivery Note",
+   "read_only": 1
   },
   {
    "allow_on_submit": 1,
@@ -243,6 +245,7 @@
    "no_copy": 1,
    "options": "Draft\nSubmitted\nDelivered\nStarted\nBlub",
    "print_hide": 1,
+   "read_only": 1,
    "search_index": 1
   },
   {
@@ -255,17 +258,19 @@
    "default": "stopped",
    "fieldname": "timer_status",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Timer Status"
   },
   {
    "fieldname": "timer_start",
    "fieldtype": "Datetime",
+   "hidden": 1,
    "label": "Timer Start"
   },
   {
-   "collapsible": 1,
    "fieldname": "aditional_info_section",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "label": "Aditional Info"
   },
   {
@@ -345,7 +350,7 @@
  "grid_page_length": 50,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-29 14:45:00.000000",
+ "modified": "2026-05-29 15:20:00.000000",
  "modified_by": "b.trzensiok@itsdave.de",
  "module": "Fieldservice",
  "name": "Service Report",
