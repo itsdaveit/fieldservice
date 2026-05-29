@@ -85,6 +85,7 @@ frappe.ui.form.on('Service Report', {
     },
 	refresh: function(frm) {
         set_link_filters(frm);
+        render_address_card(frm);
 
         if (sr_report_Interval != frm.doc.current_sr_report_Interval) {
             clearInterval(sr_report_Interval);
@@ -369,11 +370,55 @@ frappe.ui.form.on('Service Report', {
 	},
 	customer_address: function(frm) {
 		erpnext.utils.get_address_display(frm);
+		render_address_card(frm);
 	},
 	contact_person: function(frm) {
 		erpnext.utils.get_contact_details(frm);
 	},
 });
+
+
+// Render a styled address card into the read-only "address_card" HTML field.
+function render_address_card(frm) {
+	const fld = frm.fields_dict.address_card;
+	if (!fld) return;
+	const $w = fld.$wrapper;
+	if (!frm.doc.customer_address) {
+		$w.html(
+			'<div style="border:1px dashed var(--border-color);border-radius:8px;padding:12px 14px;'
+			+ 'color:var(--text-muted);font-size:13px;">' + __('Keine Adresse ausgewählt') + '</div>'
+		);
+		return;
+	}
+	frappe.db.get_doc('Address', frm.doc.customer_address).then(a => {
+		const esc = frappe.utils.escape_html;
+		const rows = [];
+		const title = frm.doc.customer_name || a.address_title || '';
+		if (title) rows.push('<div style="font-weight:600;font-size:14px;">' + esc(title) + '</div>');
+		if (a.address_line1) rows.push('<div>' + esc(a.address_line1) + '</div>');
+		if (a.address_line2) rows.push('<div>' + esc(a.address_line2) + '</div>');
+		const city = [a.pincode, a.city].filter(Boolean).map(esc).join(' ');
+		if (city) rows.push('<div>' + city + '</div>');
+		if (a.country) rows.push('<div>' + esc(a.country) + '</div>');
+		const contacts = [];
+		if (a.phone) contacts.push('☎ ' + esc(a.phone));
+		if (a.email_id) contacts.push('✉ ' + esc(a.email_id));
+		if (contacts.length) rows.push('<div style="margin-top:6px;color:var(--text-muted);font-size:12px;">' + contacts.join('&nbsp;&nbsp;') + '</div>');
+
+		const maps = 'https://www.google.com/maps/search/?api=1&query='
+			+ encodeURIComponent([a.address_line1, a.address_line2, a.pincode, a.city, a.country].filter(Boolean).join(', '));
+
+		$w.html(
+			'<div style="border:1px solid var(--border-color);border-radius:8px;padding:12px 14px;'
+			+ 'background:var(--card-bg, var(--fg-color));display:flex;gap:12px;align-items:flex-start;">'
+			+ '<div style="font-size:22px;line-height:1;">📍</div>'
+			+ '<div style="font-size:13px;line-height:1.55;flex:1;">' + rows.join('') + '</div>'
+			+ '<a href="' + maps + '" target="_blank" title="' + __('In Google Maps öffnen') + '" '
+			+ 'style="font-size:12px;white-space:nowrap;text-decoration:none;">🗺️ ' + __('Karte') + '</a>'
+			+ '</div>'
+		);
+	});
+}
 
 
 // Prefill customer_address per Fieldservice Settings (billing vs shipping + fallback),
