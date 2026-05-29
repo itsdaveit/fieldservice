@@ -390,25 +390,11 @@ function apply_preferred_customer_address(frm) {
 }
 
 
-frappe.ui.form.on("Service Report Item", {
-    item_code: function(frm, cdt, cdn) {
-        var cur_doc = locals[cdt][cdn];
-        frappe.call({
-            "method": "frappe.client.get",
-            args: {
-                doctype: "Item",
-                name: cur_doc.item_code
-			},
-			callback: function (data) {
-                frappe.model.set_value(cur_doc.item_name = data.message.item_name);
-                frm.refresh_fields();
-			}
-		})
-        
+// item_name is populated via fetch_from "item_code.item_name" on the
+// Service Report Item doctype; no client-side fetch needed (the old handler
+// called frappe.client.get with an empty item_code -> "Item None not found").
 
-    }
-});
-frappe.ui.form.on('Service Report Work',{ 
+frappe.ui.form.on('Service Report Work',{
     work_add(frm, cdt, cdn) {
         let address = frm.doc.customer_address,
             service_type = frm.doc.report_type,
