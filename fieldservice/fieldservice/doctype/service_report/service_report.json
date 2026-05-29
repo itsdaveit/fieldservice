@@ -281,7 +281,8 @@
   {
    "fieldname": "hours_sum",
    "fieldtype": "Float",
-   "label": "Hours Sum"
+   "label": "Hours Sum",
+   "read_only": 1
   },
   {
    "fieldname": "reference_document_type",
@@ -344,7 +345,7 @@
  "grid_page_length": 50,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-29 11:05:00.000000",
+ "modified": "2026-05-29 14:45:00.000000",
  "modified_by": "b.trzensiok@itsdave.de",
  "module": "Fieldservice",
  "name": "Service Report",
