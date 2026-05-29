@@ -224,6 +224,16 @@ frappe.ui.form.on('Service Report', {
             });
         }, __("Aktionen"));
 
+        // Button to change service_type for selected rows
+        frm.add_custom_button(__('🔧 Servicetyp ändern'), function() {
+            let selected_rows = frm.fields_dict.work.grid.get_selected_children();
+            if (selected_rows.length === 0) {
+                frappe.msgprint(__('Bitte wählen Sie mindestens eine Zeile aus.'));
+                return;
+            }
+            show_change_service_type_dialog(frm, selected_rows);
+        }, __("Aktionen"));
+
         // Review Pipeline button (only in Draft)
         if (frm.doc.status === "Draft" && !frm.is_new()) {
             frm.add_custom_button(__('✏️ Beschreibungen prüfen'), function() {
@@ -472,6 +482,145 @@ function hide_ai_loading() {
         clearInterval(overlay._interval);
         overlay.remove();
     }
+}
+
+// ---------------------------------------------------------------------------
+// Change Service Type: Bulk Dialog
+// ---------------------------------------------------------------------------
+
+function show_change_service_type_dialog(frm, selected_rows) {
+    // Read service_type options dynamically from doctype meta (single source of truth)
+    let st_field = frappe.meta.get_docfield('Service Report Work', 'service_type');
+    let options_str = (st_field && st_field.options)
+        ? st_field.options
+        : 'Remote Service\nOn-Site Service\nApplication Development';
+
+    // Preselect if all selected rows share the same current service_type
+    let unique_types = Array.from(new Set(selected_rows.map(r => r.service_type || '')));
+    let default_type = (unique_types.length === 1 && unique_types[0]) ? unique_types[0] : '';
+
+    let svc_colors = {
+        'Remote Service':          {bg:'#e3f2fd', color:'#1565c0'},
+        'On-Site Service':         {bg:'#fce4ec', color:'#c62828'},
+        'Application Development': {bg:'#f3e5f5', color:'#6a1b9a'}
+    };
+    function badge(svc_type) {
+        let c = svc_colors[svc_type] || {bg:'#f5f5f5', color:'#333'};
+        let label = svc_type || '—';
+        return '<span style="background:'+c.bg+';color:'+c.color+';padding:2px 8px;border-radius:10px;font-size:11px;white-space:nowrap;">'+label+'</span>';
+    }
+
+    function fmt_dt(dt) {
+        if (!dt) return '';
+        let d = new Date(dt);
+        return d.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'})
+            + ' ' + d.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+    }
+
+    // Sort rows by idx for predictable display
+    let rows = selected_rows.slice().sort((a, b) => (a.idx || 0) - (b.idx || 0));
+
+    let total_hours = 0;
+    let pos_1_row = null;
+    let rows_html = rows.map(function(r) {
+        total_hours += (r.hours || 0);
+        if (r.idx === 1) pos_1_row = r;
+        return '<tr style="border-top:1px solid #eee;">'
+            + '<td style="padding:6px 8px;font-weight:600;white-space:nowrap;">Pos '+r.idx+'</td>'
+            + '<td style="padding:6px 8px;">'+badge(r.service_type)+'</td>'
+            + '<td style="padding:6px 8px;color:#666;font-size:12px;white-space:nowrap;">'+fmt_dt(r.begin)+' – '+fmt_dt(r.end)+'</td>'
+            + '<td style="padding:6px 8px;text-align:right;font-weight:600;white-space:nowrap;">'+(r.hours || 0).toFixed(2)+' h</td>'
+            + '<td style="padding:6px 8px;text-align:center;font-size:11px;color:#666;">'+(r.travel_charges ? '✈ Anfahrt' : '')+'</td>'
+            + '</tr>';
+    }).join('');
+
+    let summary_html =
+        '<div style="margin-bottom:8px;font-weight:600;">'+rows.length+' Position(en) ausgewählt</div>'
+        + '<div style="border:1px solid var(--border-color);border-radius:6px;overflow:hidden;margin-bottom:6px;">'
+        + '<table style="width:100%;font-size:13px;border-collapse:collapse;"><tbody>'+rows_html+'</tbody></table>'
+        + '</div>'
+        + '<div style="text-align:right;font-size:12px;color:#666;">Gesamt: <strong>'+total_hours.toFixed(2)+' h</strong></div>';
+
+    let d = new frappe.ui.Dialog({
+        title: __('Servicetyp ändern'),
+        fields: [
+            { fieldtype: 'HTML', fieldname: 'summary', options: summary_html },
+            {
+                fieldtype: 'Select',
+                fieldname: 'new_service_type',
+                label: __('Neuer Service-Typ'),
+                options: options_str,
+                default: default_type,
+                reqd: 1
+            },
+            { fieldtype: 'HTML', fieldname: 'hint' }
+        ],
+        primary_action_label: __('Übernehmen'),
+        primary_action(values) {
+            let new_type = values.new_service_type;
+            if (!new_type) {
+                frappe.msgprint(__('Bitte einen Service-Typ wählen.'));
+                return;
+            }
+
+            let travel_set_for_pos_1 = false;
+
+            rows.forEach(function(row) {
+                frappe.model.set_value(row.doctype, row.name, 'service_type', new_type);
+                // Travel charges: set on Pos 1 when changing to On-Site (only if not already set)
+                if (new_type === 'On-Site Service' && row.idx === 1 && !row.travel_charges) {
+                    frappe.model.set_value(row.doctype, row.name, 'travel_charges', 1);
+                    travel_set_for_pos_1 = true;
+                }
+            });
+
+            frm.refresh_field('work');
+            d.hide();
+
+            let msg = __('Service-Typ für {0} Zeile(n) auf "{1}" geändert', [rows.length, new_type]);
+            if (travel_set_for_pos_1) {
+                msg += ' — ' + __('Anfahrt für Position 1 aktiviert');
+            }
+            frappe.show_alert({ message: msg, indicator: 'green' });
+        }
+    });
+
+    // Reactive hint: travel_charges implications for Pos 1
+    function update_hint() {
+        let val = d.get_value('new_service_type');
+        let html = '';
+
+        if (pos_1_row && val) {
+            let current = pos_1_row.service_type;
+            let has_travel = !!pos_1_row.travel_charges;
+
+            if (val === 'On-Site Service' && current !== 'On-Site Service' && !has_travel) {
+                // Pos 1 wechselt auf On-Site → Anfahrt wird automatisch gesetzt
+                html =
+                    '<div style="margin-top:8px;padding:10px 14px;border:1px solid #ffcc80;border-left:4px solid #fb8c00;border-radius:4px;background:#fff3e0;font-size:13px;color:#bf360c;">'
+                    + '✈ <strong>Position 1</strong> wechselt auf <em>On-Site Service</em> — die <strong>Anfahrt</strong> wird automatisch aktiviert.'
+                    + '</div>';
+            } else if (val === 'On-Site Service' && current !== 'On-Site Service' && has_travel) {
+                // Pos 1 wechselt auf On-Site, Anfahrt schon gesetzt
+                html =
+                    '<div style="margin-top:8px;padding:10px 14px;border:1px solid #c8e6c9;border-left:4px solid #2e7d32;border-radius:4px;background:#e8f5e9;font-size:13px;color:#1b5e20;">'
+                    + '✓ <strong>Position 1</strong> wechselt auf <em>On-Site Service</em>. Anfahrt ist bereits gesetzt.'
+                    + '</div>';
+            } else if (val !== 'On-Site Service' && current === 'On-Site Service' && has_travel) {
+                // Pos 1 wechselt weg von On-Site, Anfahrt bleibt gesetzt → Hinweis
+                html =
+                    '<div style="margin-top:8px;padding:10px 14px;border:1px solid #bbdefb;border-left:4px solid #1976d2;border-radius:4px;background:#e3f2fd;font-size:13px;color:#0d47a1;">'
+                    + 'ℹ <strong>Position 1</strong> wechselt von <em>On-Site</em> auf <em>'+val+'</em>. Die zuvor gesetzte <strong>Anfahrt</strong> bleibt unverändert und sollte ggf. manuell entfernt werden.'
+                    + '</div>';
+            }
+        }
+
+        d.fields_dict.hint.$wrapper.html(html);
+    }
+
+    d.show();
+    d.fields_dict.new_service_type.$input.on('change', update_hint);
+    update_hint();  // initial render based on default_type
 }
 
 // ---------------------------------------------------------------------------

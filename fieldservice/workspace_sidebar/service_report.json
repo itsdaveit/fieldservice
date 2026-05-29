@@ -9,6 +9,7 @@
   {
    "child": 0,
    "collapsible": 1,
+   "icon": "list",
    "indent": 0,
    "keep_closed": 0,
    "label": "Service Report",
@@ -16,10 +17,22 @@
    "link_type": "DocType",
    "show_arrow": 0,
    "type": "Link"
+  },
+  {
+   "child": 0,
+   "collapsible": 1,
+   "icon": "list",
+   "indent": 0,
+   "keep_closed": 0,
+   "label": "IT Landscape",
+   "link_to": "IT Landscape",
+   "link_type": "DocType",
+   "show_arrow": 0,
+   "type": "Link"
   }
  ],
- "modified": "2026-03-09 20:39:26.303723",
- "modified_by": "Administrator",
+ "modified": "2026-04-08 15:23:23.988331",
+ "modified_by": "l.kaschulla@itsdave.de",
  "module": "Fieldservice",
  "name": "Service Report",
  "owner": "Administrator",

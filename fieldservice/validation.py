@@ -56,47 +56,49 @@ def check_empty_work_item_address(report_doc):
             errors.append(_("No work item address found. Work Item No.: {}").format(str(work_position.idx)))
     return errors
 
+def check_empty_service_type(report_doc):
+    """Check that each work position has a service_type set"""
+    errors = []
+    for work_position in report_doc.work:
+        if not work_position.service_type:
+            errors.append(_("Service type missing. Work Item No.: {}").format(str(work_position.idx)))
+    return errors
+
+
+# Registered checks, run in order. Add new validators here.
+_CHECKS = (
+    check_work_items,
+    check_work_duration,
+    check_start_before_end,
+    check_empty_work_description,
+    check_empty_service_type,
+    check_empty_work_item_address,
+)
+
+
 def validate_service_report(report_doc, throw_errors=False):
     """
-    Validate service report and either return error messages or throw errors
-    
+    Validate service report and either return error messages or raise.
+
     Args:
         report_doc: Service Report document
-        throw_errors: If True, throw errors instead of returning them
-        
+        throw_errors: If True, raise a single ValidationError listing all
+            issues found. If False, return them as a list.
+
     Returns:
-        List of error messages if throw_errors is False, otherwise throws the first error
+        List of error messages (always — also when throw_errors=True and no
+        issues were found).
     """
     all_errors = []
-    
-    # Check work duration
-    errors = check_work_duration(report_doc)
-    if errors and throw_errors:
-        frappe.throw(errors[0])
-    all_errors.extend(errors)
-    
-    # Check work description
-    errors = check_empty_work_description(report_doc)
-    if errors and throw_errors:
-        frappe.throw(errors[0])
-    all_errors.extend(errors)
-    
-    # Check start before end
-    errors = check_start_before_end(report_doc)
-    if errors and throw_errors:
-        frappe.throw(errors[0])
-    all_errors.extend(errors)
-    
-    # Check work items
-    errors = check_work_items(report_doc)
-    if errors and throw_errors:
-        frappe.throw(errors[0])
-    all_errors.extend(errors)
-    
-    # Check work item address
-    errors = check_empty_work_item_address(report_doc)
-    if errors and throw_errors:
-        frappe.throw(errors[0])
-    all_errors.extend(errors)
-    
-    return all_errors 
+    for check in _CHECKS:
+        all_errors.extend(check(report_doc))
+
+    if all_errors and throw_errors:
+        msg = (
+            _("Service Report kann nicht gebucht werden — bitte folgende Punkte beheben:")
+            + "<br><br>"
+            + "<br>".join("• " + e for e in all_errors)
+        )
+        frappe.throw(msg)
+
+    return all_errors
