@@ -356,7 +356,9 @@ frappe.ui.form.on('Service Report', {
     //     },
 
 	customer: function(frm) {
-		erpnext.utils.get_party_details(frm);
+		erpnext.utils.get_party_details(frm, null, null, function() {
+			apply_preferred_customer_address(frm);
+		});
 		set_link_filters(frm);
 	},
 	filter_contact_by_customer: function(frm) {
@@ -372,6 +374,20 @@ frappe.ui.form.on('Service Report', {
 		erpnext.utils.get_contact_details(frm);
 	},
 });
+
+
+// Prefill customer_address per Fieldservice Settings (billing vs shipping + fallback),
+// overriding the billing-address default set by erpnext.utils.get_party_details.
+function apply_preferred_customer_address(frm) {
+	if (!frm.doc.customer) return;
+	frappe.call({
+		method: "fieldservice.api.get_preferred_customer_address",
+		args: { customer: frm.doc.customer },
+		callback: function(r) {
+			frm.set_value("customer_address", r.message || null);
+		}
+	});
+}
 
 
 frappe.ui.form.on("Service Report Item", {

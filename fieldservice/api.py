@@ -137,6 +137,52 @@ def create_travel_item(address, report_doc=None, work_position=None):
     
 
 
+@frappe.whitelist()
+def get_preferred_customer_address(customer):
+    """Return the address to prefill on a Service Report for the given customer,
+    honouring Fieldservice Settings:
+      - default_address_type: "Rechnungsadresse" (is_primary_address) or
+        "Lieferadresse" (is_shipping_address)
+      - enable_address_fallback: if no address of the preferred type is flagged,
+        fall back to the first linked address; otherwise return None.
+    """
+    if not customer:
+        return None
+
+    settings = frappe.get_single("Fieldservice Settings")
+    pref = settings.get("default_address_type") or "Rechnungsadresse"
+    flag = "is_shipping_address" if pref == "Lieferadresse" else "is_primary_address"
+    fallback = settings.get("enable_address_fallback")
+
+    base_filters = [
+        ["Dynamic Link", "link_doctype", "=", "Customer"],
+        ["Dynamic Link", "link_name", "=", customer],
+        ["disabled", "=", 0],
+    ]
+
+    flagged = frappe.get_all(
+        "Address",
+        filters=base_filters + [[flag, "=", 1]],
+        order_by="modified desc",
+        pluck="name",
+        limit=1,
+    )
+    if flagged:
+        return flagged[0]
+
+    if fallback:
+        any_addr = frappe.get_all(
+            "Address",
+            filters=base_filters,
+            order_by="creation asc",
+            pluck="name",
+            limit=1,
+        )
+        return any_addr[0] if any_addr else None
+
+    return None
+
+
 def get_items_from_sr_items(items):
     delivery_note_items = []
     for item in items:

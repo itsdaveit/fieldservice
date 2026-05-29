@@ -7,6 +7,9 @@
  "engine": "InnoDB",
  "field_order": [
   "max_work_duration",
+  "address_prefill_section",
+  "default_address_type",
+  "enable_address_fallback",
   "invoicing_section",
   "service_item_groups",
   "review_section",
@@ -24,6 +27,26 @@
    "fieldname": "max_work_duration",
    "fieldtype": "Int",
    "label": "Max Work Duration"
+  },
+  {
+   "fieldname": "address_prefill_section",
+   "fieldtype": "Section Break",
+   "label": "Adressen-Vorbelegung"
+  },
+  {
+   "default": "Rechnungsadresse",
+   "description": "Welche Kundenadresse wird beim Anlegen eines Service Reports vorbelegt: die als 'Bevorzugte Rechnungsadresse' (is_primary_address) oder als 'Bevorzugte Lieferadresse' (is_shipping_address) markierte Adresse.",
+   "fieldname": "default_address_type",
+   "fieldtype": "Select",
+   "label": "Bevorzugte Adresse bei Kundenauswahl",
+   "options": "Rechnungsadresse\nLieferadresse"
+  },
+  {
+   "default": "1",
+   "description": "Wenn keine Adresse des bevorzugten Typs existiert, die erste verknuepfte Adresse des Kunden verwenden. Aus: das Adressfeld bleibt leer.",
+   "fieldname": "enable_address_fallback",
+   "fieldtype": "Check",
+   "label": "Fallback auf erste verknuepfte Adresse"
   },
   {
    "fieldname": "invoicing_section",
@@ -87,7 +110,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-05-29 11:10:00.000000",
+ "modified": "2026-05-29 13:30:00.000000",
  "modified_by": "Administrator",
  "module": "Fieldservice",
  "name": "Fieldservice Settings",
