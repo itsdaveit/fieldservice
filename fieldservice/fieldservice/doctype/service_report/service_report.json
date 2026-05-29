@@ -152,12 +152,10 @@
    "label": "Signature Technician"
   },
   {
-   "description": "Signature of executing employee",
    "fieldname": "column_break_8",
    "fieldtype": "Column Break"
   },
   {
-   "description": "Signature of entitled customer employee",
    "fieldname": "technician",
    "fieldtype": "Signature",
    "label": "Signature Customer"
@@ -350,7 +348,7 @@
  "grid_page_length": 50,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-29 15:20:00.000000",
+ "modified": "2026-05-29 15:30:00.000000",
  "modified_by": "b.trzensiok@itsdave.de",
  "module": "Fieldservice",
  "name": "Service Report",
