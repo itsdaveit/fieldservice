@@ -50,7 +50,8 @@
    "fieldname": "hours",
    "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "Hours"
+   "label": "Hours",
+   "read_only": 1
   },
   {
    "fieldname": "aditional_info_section",
@@ -114,7 +115,7 @@
  "grid_page_length": 50,
  "istable": 1,
  "links": [],
- "modified": "2026-05-29 13:00:00.000000",
+ "modified": "2026-05-29 14:50:00.000000",
  "modified_by": "D.Malinowski@itsdave.de",
  "module": "Fieldservice",
  "name": "Service Report Work",
