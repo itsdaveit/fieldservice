@@ -328,6 +328,10 @@ def insert_surchargs_in_delivery_note(service_report):
         delivery_note = frappe.get_doc("Delivery Note", service_report_doc.delivery_note)
         customer_doc = frappe.get_doc("Customer", delivery_note.customer)
         surcharges_fur_current_surcharge_Determination = get_surcharges_fur_current_surcharge_Determination(customer_doc)
+        # No surcharge rules configured (e.g. Customer.surcharge_determination == "None"):
+        # the delivery note is already complete, skip surcharge processing.
+        if not surcharges_fur_current_surcharge_Determination:
+            return
         delivery_note_items = delivery_note.items
         delivery_note_items_copy = delivery_note_items.copy()
         delivery_note.ignore_pricing_rule = 1
