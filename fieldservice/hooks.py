@@ -60,6 +60,8 @@ app_include_js = [
 # before_install = "fieldservice.install.before_install"
 # after_install = "fieldservice.install.after_install"
 
+after_migrate = "fieldservice.setup.sync_checklist_field"
+
 # Desk Notifications
 # ------------------
 # See frappe.core.notifications.get_notification_config
