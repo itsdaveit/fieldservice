@@ -11,6 +11,8 @@
   "aditional_info_section",
   "hours",
   "service_type",
+  "employee",
+  "employee_name",
   "travel_charges",
   "address",
   "ignore_surcharges",
@@ -64,6 +66,22 @@
    "options": "Remote Service\nOn-Site Service\nApplication Development"
   },
   {
+   "description": "Defaults to the Service Report employee. Override for positions performed by another employee.",
+   "fetch_from": "parent.employee",
+   "fetch_if_empty": 1,
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "label": "Employee",
+   "options": "Employee"
+  },
+  {
+   "fetch_from": "employee.employee_name",
+   "fieldname": "employee_name",
+   "fieldtype": "Read Only",
+   "label": "Employee Name",
+   "read_only": 1
+  },
+  {
    "default": "0",
    "description": "Check if you traveled to customer adress for this work position.",
    "fieldname": "travel_charges",
@@ -97,7 +115,7 @@
  "grid_page_length": 50,
  "istable": 1,
  "links": [],
- "modified": "2026-05-29 11:00:00.000000",
+ "modified": "2026-05-29 12:30:00.000000",
  "modified_by": "D.Malinowski@itsdave.de",
  "module": "Fieldservice",
  "name": "Service Report Work",
