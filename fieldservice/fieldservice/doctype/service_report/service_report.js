@@ -86,6 +86,7 @@ frappe.ui.form.on('Service Report', {
 	refresh: function(frm) {
         set_link_filters(frm);
         render_address_card(frm);
+        render_contact_card(frm);
 
         if (sr_report_Interval != frm.doc.current_sr_report_Interval) {
             clearInterval(sr_report_Interval);
@@ -374,6 +375,7 @@ frappe.ui.form.on('Service Report', {
 	},
 	contact_person: function(frm) {
 		erpnext.utils.get_contact_details(frm);
+		render_contact_card(frm);
 	},
 });
 
@@ -415,6 +417,49 @@ function render_address_card(frm) {
 			+ '<div style="font-size:13px;line-height:1.55;flex:1;">' + rows.join('') + '</div>'
 			+ '<a href="' + maps + '" target="_blank" title="' + __('In Google Maps öffnen') + '" '
 			+ 'style="font-size:12px;white-space:nowrap;text-decoration:none;">🗺️ ' + __('Karte') + '</a>'
+			+ '</div>'
+		);
+	});
+}
+
+
+// Render a styled contact card (all emails and phone numbers) into "contact_card".
+function render_contact_card(frm) {
+	const fld = frm.fields_dict.contact_card;
+	if (!fld) return;
+	const $w = fld.$wrapper;
+	if (!frm.doc.contact_person) {
+		$w.html(
+			'<div style="border:1px dashed var(--border-color);border-radius:8px;padding:12px 14px;'
+			+ 'color:var(--text-muted);font-size:13px;">' + __('Kein Kontakt ausgewählt') + '</div>'
+		);
+		return;
+	}
+	frappe.db.get_doc('Contact', frm.doc.contact_person).then(c => {
+		const esc = frappe.utils.escape_html;
+		const rows = [];
+		const name = [c.salutation, c.first_name, c.last_name].filter(Boolean).map(esc).join(' ') || esc(c.name);
+		rows.push('<div style="font-weight:600;font-size:14px;">' + name + '</div>');
+		const sub = [c.designation, c.company_name].filter(Boolean).map(esc).join(', ');
+		if (sub) rows.push('<div style="color:var(--text-muted);font-size:12px;margin-bottom:4px;">' + esc(sub) + '</div>');
+
+		(c.email_ids || []).forEach(e => {
+			if (!e.email_id) return;
+			const prim = e.is_primary ? ' <span style="color:var(--text-muted);">(' + __('primär') + ')</span>' : '';
+			rows.push('<div>✉ <a href="mailto:' + encodeURIComponent(e.email_id) + '">' + esc(e.email_id) + '</a>' + prim + '</div>');
+		});
+		(c.phone_nos || []).forEach(p => {
+			if (!p.phone) return;
+			const icon = p.is_primary_mobile_no ? '📱' : '☎';
+			rows.push('<div>' + icon + ' <a href="tel:' + encodeURIComponent(p.phone) + '">' + esc(p.phone) + '</a></div>');
+		});
+		if (rows.length === 1) rows.push('<div style="color:var(--text-muted);font-size:12px;">' + __('Keine Kontaktdaten hinterlegt') + '</div>');
+
+		$w.html(
+			'<div style="border:1px solid var(--border-color);border-radius:8px;padding:12px 14px;'
+			+ 'background:var(--card-bg, var(--fg-color));display:flex;gap:12px;align-items:flex-start;">'
+			+ '<div style="font-size:22px;line-height:1;">👤</div>'
+			+ '<div style="font-size:13px;line-height:1.55;flex:1;">' + rows.join('') + '</div>'
 			+ '</div>'
 		);
 	});

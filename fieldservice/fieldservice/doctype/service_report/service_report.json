@@ -23,6 +23,7 @@
   "contact_person",
   "filter_contact_by_customer",
   "contact_email",
+  "contact_card",
   "address_display",
   "auftragsdetails",
   "externe_auftragsnummer",
@@ -220,7 +221,13 @@
    "fetch_from": "contact_person.email_id",
    "fieldname": "contact_email",
    "fieldtype": "Read Only",
+   "hidden": 1,
    "label": "Contact E-Mail"
+  },
+  {
+   "fieldname": "contact_card",
+   "fieldtype": "HTML",
+   "label": "Kontakt"
   },
   {
    "allow_in_quick_entry": 1,
@@ -366,7 +373,7 @@
  "grid_page_length": 50,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-29 16:00:00.000000",
+ "modified": "2026-05-30 10:00:00.000000",
  "modified_by": "b.trzensiok@itsdave.de",
  "module": "Fieldservice",
  "name": "Service Report",
