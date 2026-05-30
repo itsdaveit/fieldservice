@@ -10,6 +10,8 @@
   "address_prefill_section",
   "default_address_type",
   "enable_address_fallback",
+  "service_report_section",
+  "reference_document_types",
   "invoicing_section",
   "service_item_groups",
   "review_section",
@@ -47,6 +49,18 @@
    "fieldname": "enable_address_fallback",
    "fieldtype": "Check",
    "label": "Fallback auf erste verknuepfte Adresse"
+  },
+  {
+   "fieldname": "service_report_section",
+   "fieldtype": "Section Break",
+   "label": "Service Report"
+  },
+  {
+   "fieldname": "reference_document_types",
+   "fieldtype": "Table MultiSelect",
+   "label": "Erlaubte Bezugsdokumenttypen",
+   "options": "Fieldservice Reference Doctype",
+   "description": "DocTypes, die im Service Report als Bezugsdokumenttyp waehlbar sind. Leer = Standard: Angebot, Auftrag, Lieferschein, Ausgangsrechnung."
   },
   {
    "fieldname": "invoicing_section",
@@ -110,7 +124,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-05-29 13:30:00.000000",
+ "modified": "2026-05-30 13:30:00.000000",
  "modified_by": "Administrator",
  "module": "Fieldservice",
  "name": "Fieldservice Settings",

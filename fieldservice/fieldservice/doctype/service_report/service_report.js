@@ -81,7 +81,7 @@ frappe.ui.form.on('Service Report', {
     onload: function(frm){
         frm.trigger('employee')
         frm.trigger('customer')
-        
+        set_reference_document_type_query(frm);
     },
 	refresh: function(frm) {
         set_link_filters(frm);
@@ -531,6 +531,21 @@ function apply_preferred_customer_address(frm) {
 		args: { customer: frm.doc.customer },
 		callback: function(r) {
 			frm.set_value("customer_address", r.message || null);
+		}
+	});
+}
+
+
+// Restrict the reference_document_type picker to the DocTypes configured in
+// Fieldservice Settings (default: Quotation / Sales Order / Delivery Note / Sales Invoice).
+function set_reference_document_type_query(frm) {
+	frappe.call({
+		method: "fieldservice.api.get_reference_document_types",
+		callback: function(r) {
+			const types = r.message || [];
+			frm.set_query("reference_document_type", function() {
+				return { filters: { name: ["in", types] } };
+			});
 		}
 	});
 }

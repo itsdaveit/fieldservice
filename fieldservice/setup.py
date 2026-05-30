@@ -36,3 +36,20 @@ def sync_checklist_field():
 		for fn in ("Service Report-checklists", "Service Report-checklists_section"):
 			if frappe.db.exists("Custom Field", fn):
 				frappe.delete_doc("Custom Field", fn, force=1, ignore_permissions=True)
+
+
+DEFAULT_REFERENCE_DOCTYPES = ["Quotation", "Sales Order", "Delivery Note", "Sales Invoice"]
+
+
+def seed_reference_document_types():
+	"""Pre-fill Fieldservice Settings with the default reference DocTypes
+	(Quotation / Sales Order / Delivery Note / Sales Invoice) when the list
+	is empty, so the defaults are visible and editable."""
+	settings = frappe.get_single("Fieldservice Settings")
+	if settings.get("reference_document_types"):
+		return
+	for dt in DEFAULT_REFERENCE_DOCTYPES:
+		if frappe.db.exists("DocType", dt):
+			settings.append("reference_document_types", {"document_type": dt})
+	settings.flags.ignore_permissions = True
+	settings.save()

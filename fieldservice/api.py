@@ -183,6 +183,21 @@ def get_preferred_customer_address(customer):
     return None
 
 
+DEFAULT_REFERENCE_DOCTYPES = ["Quotation", "Sales Order", "Delivery Note", "Sales Invoice"]
+
+
+@frappe.whitelist()
+def get_reference_document_types():
+    """DocTypes selectable as Service Report reference document type.
+    Configurable via Fieldservice Settings; falls back to the defaults
+    (Quotation / Sales Order / Delivery Note / Sales Invoice) when unset."""
+    settings = frappe.get_single("Fieldservice Settings")
+    types = [r.document_type for r in (settings.get("reference_document_types") or []) if r.document_type]
+    if not types:
+        types = [dt for dt in DEFAULT_REFERENCE_DOCTYPES if frappe.db.exists("DocType", dt)]
+    return types
+
+
 def get_items_from_sr_items(items):
     delivery_note_items = []
     for item in items:
