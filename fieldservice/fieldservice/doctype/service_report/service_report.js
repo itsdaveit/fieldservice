@@ -87,6 +87,7 @@ frappe.ui.form.on('Service Report', {
         set_link_filters(frm);
         render_address_card(frm);
         render_contact_card(frm);
+        render_quick_add_buttons(frm);
 
         if (sr_report_Interval != frm.doc.current_sr_report_Interval) {
             clearInterval(sr_report_Interval);
@@ -481,6 +482,43 @@ function equalize_info_cards(frm) {
 		const max = Math.max(...els.map(el => el.offsetHeight));
 		els.forEach(el => { el.style.minHeight = max + 'px'; });
 	}, 60);
+}
+
+
+// Quick-add buttons next to the hours sum: each adds a work position ending now
+// and starting "minutes" ago, with a placeholder description to edit later.
+const QUICK_ADD_DURATIONS = [
+	{ label: '15', minutes: 15 },
+	{ label: '30', minutes: 30 },
+	{ label: '45', minutes: 45 },
+	{ label: '1 Std.', minutes: 60 },
+	{ label: '2 Std.', minutes: 120 },
+];
+
+function render_quick_add_buttons(frm) {
+	const fld = frm.fields_dict.quick_add_buttons;
+	if (!fld) return;
+	const $w = fld.$wrapper.empty();
+	if (frm.doc.docstatus !== 0) return; // only while editable
+	const $row = $('<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end;margin-top:23px;"></div>');
+	$row.append('<span style="font-size:12px;color:var(--text-muted);margin-right:2px;">' + __('Schnell erfassen') + ':</span>');
+	QUICK_ADD_DURATIONS.forEach(d => {
+		const $b = $('<button type="button" class="btn btn-xs btn-default">' + frappe.utils.escape_html(d.label) + '</button>');
+		$b.on('click', () => add_quick_work_position(frm, d.minutes));
+		$row.append($b);
+	});
+	$w.append($row);
+}
+
+function add_quick_work_position(frm, minutes) {
+	const end = frappe.datetime.now_datetime();
+	const begin = moment(end, 'YYYY-MM-DD HH:mm:ss').subtract(minutes, 'minutes').format('YYYY-MM-DD HH:mm:ss');
+	const row = frm.fields_dict.work.grid.add_new_row(); // fires work_add (service_type/employee/address defaults)
+	frappe.model.set_value(row.doctype, row.name, 'begin', begin);
+	frappe.model.set_value(row.doctype, row.name, 'end', end);
+	frappe.model.set_value(row.doctype, row.name, 'description', __('Tätigkeit hier beschreiben …'));
+	frm.refresh_field('work');
+	frappe.show_alert({ message: __('Arbeitsposition ({0} Min.) hinzugefügt', [minutes]), indicator: 'green' });
 }
 
 

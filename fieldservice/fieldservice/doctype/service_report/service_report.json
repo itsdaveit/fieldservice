@@ -35,7 +35,10 @@
   "reference_document_id",
   "work_performed_section",
   "work",
+  "hours_summary_section",
   "hours_sum",
+  "column_break_quickadd",
+  "quick_add_buttons",
   "items_delivered_section",
   "scan_barcode",
   "items",
@@ -307,10 +310,23 @@
    "options": "<div class=\"container\" id=\"timer\"></div>"
   },
   {
+   "fieldname": "hours_summary_section",
+   "fieldtype": "Section Break"
+  },
+  {
    "fieldname": "hours_sum",
    "fieldtype": "Float",
    "label": "Hours Sum",
    "read_only": 1
+  },
+  {
+   "fieldname": "column_break_quickadd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "quick_add_buttons",
+   "fieldtype": "HTML",
+   "label": "Schnellerfassung"
   },
   {
    "fieldname": "reference_document_type",
@@ -373,7 +389,7 @@
  "grid_page_length": 50,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-30 10:00:00.000000",
+ "modified": "2026-05-30 11:30:00.000000",
  "modified_by": "b.trzensiok@itsdave.de",
  "module": "Fieldservice",
  "name": "Service Report",
