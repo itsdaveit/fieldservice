@@ -114,8 +114,7 @@
   },
   {
    "fieldname": "section_break_9",
-   "fieldtype": "Section Break",
-   "label": "Report Parameters"
+   "fieldtype": "Section Break"
   },
   {
    "allow_in_quick_entry": 1,
@@ -127,8 +126,7 @@
   },
   {
    "fieldname": "work_performed_section",
-   "fieldtype": "Section Break",
-   "label": "Work Performed"
+   "fieldtype": "Section Break"
   },
   {
    "fieldname": "work",
@@ -138,8 +136,7 @@
   },
   {
    "fieldname": "items_delivered_section",
-   "fieldtype": "Section Break",
-   "label": "Items Delivered"
+   "fieldtype": "Section Break"
   },
   {
    "fieldname": "items",
@@ -386,7 +383,7 @@
  "grid_page_length": 50,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-05-30 13:00:00.000000",
+ "modified": "2026-05-30 13:10:00.000000",
  "modified_by": "b.trzensiok@itsdave.de",
  "module": "Fieldservice",
  "name": "Service Report",
