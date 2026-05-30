@@ -387,9 +387,10 @@ function render_address_card(frm) {
 	const $w = fld.$wrapper;
 	if (!frm.doc.customer_address) {
 		$w.html(
-			'<div style="border:1px dashed var(--border-color);border-radius:8px;padding:12px 14px;'
+			'<div class="sr-info-card" style="box-sizing:border-box;margin-bottom:16px;border:1px dashed var(--border-color);border-radius:8px;padding:12px 14px;'
 			+ 'color:var(--text-muted);font-size:13px;">' + __('Keine Adresse ausgewählt') + '</div>'
 		);
+		equalize_info_cards(frm);
 		return;
 	}
 	frappe.db.get_doc('Address', frm.doc.customer_address).then(a => {
@@ -411,7 +412,7 @@ function render_address_card(frm) {
 			+ encodeURIComponent([a.address_line1, a.address_line2, a.pincode, a.city, a.country].filter(Boolean).join(', '));
 
 		$w.html(
-			'<div style="border:1px solid var(--border-color);border-radius:8px;padding:12px 14px;'
+			'<div class="sr-info-card" style="box-sizing:border-box;margin-bottom:16px;border:1px solid var(--border-color);border-radius:8px;padding:12px 14px;'
 			+ 'background:var(--card-bg, var(--fg-color));display:flex;gap:12px;align-items:flex-start;">'
 			+ '<div style="font-size:22px;line-height:1;">📍</div>'
 			+ '<div style="font-size:13px;line-height:1.55;flex:1;">' + rows.join('') + '</div>'
@@ -419,6 +420,7 @@ function render_address_card(frm) {
 			+ 'style="font-size:12px;white-space:nowrap;text-decoration:none;">🗺️ ' + __('Karte') + '</a>'
 			+ '</div>'
 		);
+		equalize_info_cards(frm);
 	});
 }
 
@@ -430,9 +432,10 @@ function render_contact_card(frm) {
 	const $w = fld.$wrapper;
 	if (!frm.doc.contact_person) {
 		$w.html(
-			'<div style="border:1px dashed var(--border-color);border-radius:8px;padding:12px 14px;'
+			'<div class="sr-info-card" style="box-sizing:border-box;margin-bottom:16px;border:1px dashed var(--border-color);border-radius:8px;padding:12px 14px;'
 			+ 'color:var(--text-muted);font-size:13px;">' + __('Kein Kontakt ausgewählt') + '</div>'
 		);
+		equalize_info_cards(frm);
 		return;
 	}
 	frappe.db.get_doc('Contact', frm.doc.contact_person).then(c => {
@@ -456,13 +459,28 @@ function render_contact_card(frm) {
 		if (rows.length === 1) rows.push('<div style="color:var(--text-muted);font-size:12px;">' + __('Keine Kontaktdaten hinterlegt') + '</div>');
 
 		$w.html(
-			'<div style="border:1px solid var(--border-color);border-radius:8px;padding:12px 14px;'
+			'<div class="sr-info-card" style="box-sizing:border-box;margin-bottom:16px;border:1px solid var(--border-color);border-radius:8px;padding:12px 14px;'
 			+ 'background:var(--card-bg, var(--fg-color));display:flex;gap:12px;align-items:flex-start;">'
 			+ '<div style="font-size:22px;line-height:1;">👤</div>'
 			+ '<div style="font-size:13px;line-height:1.55;flex:1;">' + rows.join('') + '</div>'
 			+ '</div>'
 		);
+		equalize_info_cards(frm);
 	});
+}
+
+
+// Make the address and contact cards the same height (align bottoms).
+function equalize_info_cards(frm) {
+	setTimeout(() => {
+		const els = ['address_card', 'contact_card']
+			.map(fn => frm.fields_dict[fn] && frm.fields_dict[fn].$wrapper.find('.sr-info-card')[0])
+			.filter(Boolean);
+		if (els.length < 2) return;
+		els.forEach(el => { el.style.minHeight = ''; });
+		const max = Math.max(...els.map(el => el.offsetHeight));
+		els.forEach(el => { el.style.minHeight = max + 'px'; });
+	}, 60);
 }
 
 
