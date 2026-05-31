@@ -265,7 +265,7 @@ def run_llm_review(service_report):
 		doc.save()
 
 	# Run LLM step
-	model = getattr(settings, 'ai_model', None) or 'claude-sonnet-4-20250514'
+	model = getattr(settings, 'ai_model', None) or 'claude-sonnet-4-6'
 	system_prompt = getattr(settings, 'ai_system_prompt', None) or ''
 
 	step = LLMTextCorrectionStep(api_key, model, system_prompt)

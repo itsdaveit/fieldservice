@@ -627,7 +627,7 @@ class LLMTextCorrectionStep(ReviewStep):
 
     def __init__(self, api_key: str, model: str, system_prompt: str):
         self.api_key = api_key
-        self.model = model or "claude-sonnet-4-20250514"
+        self.model = model or "claude-sonnet-4-6"
         self.system_prompt = system_prompt or DEFAULT_AI_SYSTEM_PROMPT
 
     def execute(self, doc, previous_results: list[ReviewResult]) -> list[ReviewResult]:
