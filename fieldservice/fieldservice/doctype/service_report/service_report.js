@@ -955,7 +955,11 @@ function show_review_dialog(frm, fixes_data, from_submit) {
             let prefill = prefill_lines.join('\n');
             let line_count = Math.max(prefill_lines.length, 3);
             let ta_height = (line_count * 22) + 20;
-            body += '<textarea data-custom-text-index="'+fix._index+'" data-original-prefill="'+encodeURIComponent(prefill)+'" style="width:100%;height:'+ta_height+'px;margin-top:6px;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:13px;font-family:inherit;resize:vertical;line-height:20px;">'+prefill+'</textarea>';
+            // Prefill only via the URI-encoded attribute: raw newlines in the dialog
+            // body get replaced by spaces in frappe.render (microtemplate), which
+            // made the textarea value differ from the prefill and silently squashed
+            // multi-line corrections into a single <p> on apply.
+            body += '<textarea data-custom-text-index="'+fix._index+'" data-original-prefill="'+encodeURIComponent(prefill)+'" style="width:100%;height:'+ta_height+'px;margin-top:6px;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:13px;font-family:inherit;resize:vertical;line-height:20px;"></textarea>';
             body += '</details>';
         }
 
@@ -1097,6 +1101,11 @@ function show_review_dialog(frm, fixes_data, from_submit) {
 
     d.$wrapper.find('.modal-dialog').css('max-width', '960px');
     d.show();
+
+    // Populate custom-text areas from the attribute (newline-safe)
+    d.$wrapper.find('textarea[data-custom-text-index]').each(function() {
+        this.value = decodeURIComponent(this.getAttribute('data-original-prefill') || '');
+    });
 
     // Auto-resize textareas when details is toggled open
     function autosize(ta) {
