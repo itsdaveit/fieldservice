@@ -11,7 +11,6 @@
   "default_address_type",
   "enable_address_fallback",
   "service_report_section",
-  "reference_document_types",
   "review_section",
   "review_mode",
   "ai_review_section",
@@ -52,13 +51,6 @@
    "fieldname": "service_report_section",
    "fieldtype": "Section Break",
    "label": "Service Report"
-  },
-  {
-   "fieldname": "reference_document_types",
-   "fieldtype": "Table MultiSelect",
-   "label": "Erlaubte Bezugsdokumenttypen",
-   "options": "Fieldservice Reference Doctype",
-   "description": "DocTypes, die im Service Report als Bezugsdokumenttyp waehlbar sind. Leer = Standard: Angebot, Auftrag, Lieferschein, Ausgangsrechnung."
   },
   {
    "fieldname": "review_section",

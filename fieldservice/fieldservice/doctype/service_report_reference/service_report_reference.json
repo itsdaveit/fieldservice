@@ -1,0 +1,88 @@
+{
+ "actions": [],
+ "creation": "2026-08-22 09:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "source",
+  "source_type",
+  "document_type",
+  "document_name",
+  "external_id",
+  "external_entry",
+  "subject"
+ ],
+ "fields": [
+  {
+   "columns": 2,
+   "fieldname": "source",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Source",
+   "options": "Reference Source",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "source.source_type",
+   "fieldname": "source_type",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Source Type",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "source.document_type",
+   "fieldname": "document_type",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Document Type",
+   "options": "DocType",
+   "read_only": 1
+  },
+  {
+   "columns": 3,
+   "depends_on": "eval:doc.source_type!='External System'",
+   "fieldname": "document_name",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "label": "Document",
+   "options": "document_type"
+  },
+  {
+   "columns": 2,
+   "depends_on": "eval:doc.source_type=='External System'",
+   "fieldname": "external_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Reference"
+  },
+  {
+   "columns": 1,
+   "depends_on": "eval:doc.source_type=='External System'",
+   "description": "Optional reference to a single entry inside the record (article, comment, time entry).",
+   "fieldname": "external_entry",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Entry"
+  },
+  {
+   "columns": 3,
+   "fieldname": "subject",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Subject"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-08-22 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fieldservice",
+ "name": "Service Report Reference",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

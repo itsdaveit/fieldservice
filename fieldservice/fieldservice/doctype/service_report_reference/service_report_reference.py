@@ -4,5 +4,5 @@
 from frappe.model.document import Document
 
 
-class ServiceReportTicketReference(Document):
+class ServiceReportReference(Document):
 	pass

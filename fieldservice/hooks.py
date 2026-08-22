@@ -58,11 +58,10 @@ app_include_js = [
 # ------------
 
 # before_install = "fieldservice.install.before_install"
-# after_install = "fieldservice.install.after_install"
+after_install = "fieldservice.setup.seed_reference_sources"
 
 after_migrate = [
     "fieldservice.setup.sync_checklist_field",
-    "fieldservice.setup.seed_reference_document_types",
 ]
 
 # Desk Notifications

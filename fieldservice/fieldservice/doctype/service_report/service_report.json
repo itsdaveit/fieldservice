@@ -30,12 +30,9 @@
   "section_break_9",
   "report_type",
   "externe_auftragsnummer",
-  "column_break_17",
-  "reference_document_type",
-  "reference_document_id",
-  "tickets_section",
-  "ticket_references",
-  "ticket_links",
+  "references_section",
+  "references",
+  "reference_links",
   "work_performed_section",
   "work",
   "hours_summary_section",
@@ -327,22 +324,6 @@
    "label": "Schnellerfassung"
   },
   {
-   "fieldname": "reference_document_type",
-   "fieldtype": "Link",
-   "label": "Reference Document Type",
-   "options": "DocType"
-  },
-  {
-   "fieldname": "reference_document_id",
-   "fieldtype": "Dynamic Link",
-   "label": "Reference Document ID",
-   "options": "reference_document_type"
-  },
-  {
-   "fieldname": "column_break_17",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "auftragsdetails",
    "fieldtype": "Section Break"
   },
@@ -384,23 +365,23 @@
   },
   {
    "collapsible": 1,
-   "collapsible_depends_on": "eval:doc.ticket_references && doc.ticket_references.length",
-   "fieldname": "tickets_section",
+   "collapsible_depends_on": "eval:doc.references && doc.references.length",
+   "fieldname": "references_section",
    "fieldtype": "Section Break",
-   "label": "Tickets"
+   "label": "References"
   },
   {
-   "description": "Tickets this service report relates to. Positions can carry their own ticket; those are collected here automatically on save.",
-   "fieldname": "ticket_references",
+   "description": "What this service report relates to: documents on this site (quotation, order, IT object) and records in external systems (tickets). Positions can carry their own reference; those are collected here automatically on save.",
+   "fieldname": "references",
    "fieldtype": "Table",
-   "label": "Ticket References",
-   "options": "Service Report Ticket Reference"
+   "label": "References",
+   "options": "Service Report Reference"
   },
   {
-   "depends_on": "eval:doc.ticket_references && doc.ticket_references.length",
-   "fieldname": "ticket_links",
+   "depends_on": "eval:doc.references && doc.references.length",
+   "fieldname": "reference_links",
    "fieldtype": "HTML",
-   "label": "Ticket Links"
+   "label": "Reference Links"
   }
  ],
  "grid_page_length": 50,

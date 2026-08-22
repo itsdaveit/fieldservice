@@ -60,52 +60,56 @@ function set_link_filters(frm) {
 }
 
 // ---------------------------------------------------------------------------
-// Ticket references
+// References (documents on this site and records in external systems)
 // ---------------------------------------------------------------------------
 
-// Enabled ticket systems, fetched once per form session.
-let sr_ticket_systems = null;
+// Enabled reference sources, fetched once per form session.
+let sr_reference_sources = null;
 
-function load_ticket_systems() {
-	if (sr_ticket_systems) return Promise.resolve(sr_ticket_systems);
-	return frappe.call({ method: 'fieldservice.tickets.get_ticket_systems' }).then(r => {
-		sr_ticket_systems = {};
-		(r.message || []).forEach(sys => { sr_ticket_systems[sys.name] = sys; });
-		return sr_ticket_systems;
+function load_reference_sources() {
+	if (sr_reference_sources) return Promise.resolve(sr_reference_sources);
+	return frappe.call({ method: 'fieldservice.references.get_reference_sources' }).then(r => {
+		sr_reference_sources = {};
+		(r.message || []).forEach(src => { sr_reference_sources[src.name] = src; });
+		return sr_reference_sources;
 	});
 }
 
-function build_ticket_url(system, reference, entry) {
-	if (!system || !reference) return null;
-	if (entry && system.entry_url_template) {
-		return system.entry_url_template.replace('{id}', reference).replace('{entry}', entry);
+function build_reference_url(source, reference, entry) {
+	if (!source || !reference) return null;
+	if (source.source_type === 'Document') {
+		if (!source.document_type) return null;
+		return '/app/' + frappe.router.slug(source.document_type) + '/' + encodeURIComponent(reference);
 	}
-	if (system.local_doctype) {
-		return '/app/' + frappe.router.slug(system.local_doctype) + '/' + encodeURIComponent(reference);
+	if (entry && source.entry_url_template) {
+		return source.entry_url_template.replace('{id}', reference).replace('{entry}', entry);
 	}
-	if (system.ticket_url_template) {
-		return system.ticket_url_template.replace('{id}', encodeURIComponent(reference));
+	if (source.url_template) {
+		return source.url_template.replace('{id}', encodeURIComponent(reference));
 	}
 	return null;
 }
 
-// Render the report's ticket references as clickable chips.
-function render_ticket_links(frm) {
-	const fld = frm.fields_dict.ticket_links;
+// Render the report's references as clickable chips.
+function render_reference_links(frm) {
+	const fld = frm.fields_dict.reference_links;
 	if (!fld) return;
-	const rows = (frm.doc.ticket_references || []).filter(r => r.ticket_reference);
+	const rows = (frm.doc.references || []).filter(r => r.document_name || r.external_id);
 	if (!rows.length) {
 		fld.$wrapper.empty();
 		return;
 	}
-	load_ticket_systems().then(systems => {
+	load_reference_sources().then(sources => {
 		const esc = frappe.utils.escape_html;
 		const chips = rows.map(row => {
-			const system = systems[row.ticket_system];
-			const url = build_ticket_url(system, row.ticket_reference, row.ticket_entry);
-			const label = esc(row.ticket_reference) + (row.ticket_entry ? ' <span style="opacity:.6;">#' + esc(row.ticket_entry) + '</span>' : '');
-			const title = [row.ticket_system, row.subject].filter(Boolean).map(esc).join(' — ');
-			const inner = '<span style="font-size:13px;">🎫 ' + label + '</span>';
+			const source = sources[row.source];
+			const reference = row.document_name || row.external_id;
+			const url = build_reference_url(source, reference, row.external_entry);
+			const icon = (source && source.source_type === 'Document') ? '📄' : '🎫';
+			const label = esc(reference)
+				+ (row.external_entry ? ' <span style="opacity:.6;">#' + esc(row.external_entry) + '</span>' : '');
+			const title = [row.source, row.subject].filter(Boolean).map(esc).join(' — ');
+			const inner = '<span style="font-size:13px;">' + icon + ' ' + label + '</span>';
 			const style = 'display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border-color);'
 				+ 'border-radius:20px;padding:4px 12px;margin:0 8px 8px 0;background:var(--card-bg, var(--fg-color));'
 				+ 'text-decoration:none;white-space:nowrap;';
@@ -141,14 +145,13 @@ frappe.ui.form.on('Service Report', {
     onload: function(frm){
         frm.trigger('employee')
         frm.trigger('customer')
-        set_reference_document_type_query(frm);
     },
 	refresh: function(frm) {
         set_link_filters(frm);
         render_address_card(frm);
         render_contact_card(frm);
         render_quick_add_buttons(frm);
-        render_ticket_links(frm);
+        render_reference_links(frm);
 
         if (sr_report_Interval != frm.doc.current_sr_report_Interval) {
             clearInterval(sr_report_Interval);
@@ -597,48 +600,43 @@ function apply_preferred_customer_address(frm) {
 }
 
 
-// Restrict the reference_document_type picker to the DocTypes configured in
-// Fieldservice Settings (default: Quotation / Sales Order / Delivery Note / Sales Invoice).
-function set_reference_document_type_query(frm) {
-	frappe.call({
-		method: "fieldservice.api.get_reference_document_types",
-		callback: function(r) {
-			const types = r.message || [];
-			frm.set_query("reference_document_type", function() {
-				return { filters: { name: ["in", types] } };
-			});
-		}
-	});
-}
-
-
 // item_name is populated via fetch_from "item_code.item_name" on the
 // Service Report Item doctype; no client-side fetch needed (the old handler
 // called frappe.client.get with an empty item_code -> "Item None not found").
 
-frappe.ui.form.on('Service Report Ticket Reference', {
-    ticket_references_add(frm, cdt, cdn) {
-        load_ticket_systems().then(systems => {
-            const fallback = Object.values(systems).find(s => s.is_default);
-            if (fallback && !frappe.model.get_value(cdt, cdn, 'ticket_system')) {
-                frappe.model.set_value(cdt, cdn, 'ticket_system', fallback.name);
+frappe.ui.form.on('Service Report Reference', {
+    references_add(frm, cdt, cdn) {
+        load_reference_sources().then(sources => {
+            const fallback = Object.values(sources).find(s => s.is_default);
+            if (fallback && !frappe.model.get_value(cdt, cdn, 'source')) {
+                frappe.model.set_value(cdt, cdn, 'source', fallback.name);
             }
         });
     },
-    ticket_references_remove(frm) {
-        render_ticket_links(frm);
+    source(frm, cdt, cdn) {
+        // The Dynamic Link needs the source's DocType in its own row.
+        load_reference_sources().then(sources => {
+            const source = sources[frappe.model.get_value(cdt, cdn, 'source')];
+            if (!source) return;
+            frappe.model.set_value(cdt, cdn, 'source_type', source.source_type);
+            frappe.model.set_value(cdt, cdn, 'document_type', source.document_type || null);
+            render_reference_links(frm);
+        });
     },
-    ticket_system(frm) {
-        render_ticket_links(frm);
+    references_remove(frm) {
+        render_reference_links(frm);
     },
-    ticket_reference(frm) {
-        render_ticket_links(frm);
+    document_name(frm) {
+        render_reference_links(frm);
     },
-    ticket_entry(frm) {
-        render_ticket_links(frm);
+    external_id(frm) {
+        render_reference_links(frm);
+    },
+    external_entry(frm) {
+        render_reference_links(frm);
     },
     subject(frm) {
-        render_ticket_links(frm);
+        render_reference_links(frm);
     }
 });
 

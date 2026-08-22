@@ -1,0 +1,136 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:title",
+ "creation": "2026-08-22 09:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "enabled",
+  "column_break_head",
+  "source_type",
+  "is_default",
+  "document_section",
+  "document_type",
+  "templates_section",
+  "url_template",
+  "entry_url_template",
+  "validation_section",
+  "id_pattern"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Enabled"
+  },
+  {
+   "fieldname": "column_break_head",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Document",
+   "description": "Document: a DocType on this site, referenced as a real link. External System: anything outside this site, referenced by its ID and reachable through an URL template.",
+   "fieldname": "source_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Source Type",
+   "options": "Document\nExternal System",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "description": "Preselected on new references. Only one source can be the default.",
+   "fieldname": "is_default",
+   "fieldtype": "Check",
+   "label": "Default"
+  },
+  {
+   "depends_on": "eval:doc.source_type=='Document'",
+   "fieldname": "document_section",
+   "fieldtype": "Section Break",
+   "label": "Document"
+  },
+  {
+   "depends_on": "eval:doc.source_type=='Document'",
+   "description": "The DocType referenced through this source, e.g. Quotation, Sales Order or IT Object.",
+   "fieldname": "document_type",
+   "fieldtype": "Link",
+   "label": "Document Type",
+   "mandatory_depends_on": "eval:doc.source_type=='Document'",
+   "options": "DocType"
+  },
+  {
+   "depends_on": "eval:doc.source_type=='External System'",
+   "fieldname": "templates_section",
+   "fieldtype": "Section Break",
+   "label": "Deep Links"
+  },
+  {
+   "depends_on": "eval:doc.source_type=='External System'",
+   "description": "URL of a single record. Use {id} as placeholder, e.g. https://helpdesk.example.com/helpdesk/tickets/{id}",
+   "fieldname": "url_template",
+   "fieldtype": "Data",
+   "label": "URL Template"
+  },
+  {
+   "depends_on": "eval:doc.source_type=='External System'",
+   "description": "Optional URL of a single entry inside a record (article, comment, time entry). Placeholders: {id} and {entry}.",
+   "fieldname": "entry_url_template",
+   "fieldtype": "Data",
+   "label": "Entry URL Template"
+  },
+  {
+   "depends_on": "eval:doc.source_type=='External System'",
+   "fieldname": "validation_section",
+   "fieldtype": "Section Break",
+   "label": "Validation"
+  },
+  {
+   "depends_on": "eval:doc.source_type=='External System'",
+   "description": "Optional regular expression a reference must match, e.g. ^ITSD-\\d{5}$. Leave empty to accept anything.",
+   "fieldname": "id_pattern",
+   "fieldtype": "Data",
+   "label": "ID Pattern"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-22 09:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Fieldservice",
+ "name": "Reference Source",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "Fieldservice User"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
