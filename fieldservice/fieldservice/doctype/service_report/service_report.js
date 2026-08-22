@@ -59,6 +59,66 @@ function set_link_filters(frm) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Ticket references
+// ---------------------------------------------------------------------------
+
+// Enabled ticket systems, fetched once per form session.
+let sr_ticket_systems = null;
+
+function load_ticket_systems() {
+	if (sr_ticket_systems) return Promise.resolve(sr_ticket_systems);
+	return frappe.call({ method: 'fieldservice.tickets.get_ticket_systems' }).then(r => {
+		sr_ticket_systems = {};
+		(r.message || []).forEach(sys => { sr_ticket_systems[sys.name] = sys; });
+		return sr_ticket_systems;
+	});
+}
+
+function build_ticket_url(system, reference, entry) {
+	if (!system || !reference) return null;
+	if (entry && system.entry_url_template) {
+		return system.entry_url_template.replace('{id}', reference).replace('{entry}', entry);
+	}
+	if (system.local_doctype) {
+		return '/app/' + frappe.router.slug(system.local_doctype) + '/' + encodeURIComponent(reference);
+	}
+	if (system.ticket_url_template) {
+		return system.ticket_url_template.replace('{id}', encodeURIComponent(reference));
+	}
+	return null;
+}
+
+// Render the report's ticket references as clickable chips.
+function render_ticket_links(frm) {
+	const fld = frm.fields_dict.ticket_links;
+	if (!fld) return;
+	const rows = (frm.doc.ticket_references || []).filter(r => r.ticket_reference);
+	if (!rows.length) {
+		fld.$wrapper.empty();
+		return;
+	}
+	load_ticket_systems().then(systems => {
+		const esc = frappe.utils.escape_html;
+		const chips = rows.map(row => {
+			const system = systems[row.ticket_system];
+			const url = build_ticket_url(system, row.ticket_reference, row.ticket_entry);
+			const label = esc(row.ticket_reference) + (row.ticket_entry ? ' <span style="opacity:.6;">#' + esc(row.ticket_entry) + '</span>' : '');
+			const title = [row.ticket_system, row.subject].filter(Boolean).map(esc).join(' — ');
+			const inner = '<span style="font-size:13px;">🎫 ' + label + '</span>';
+			const style = 'display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border-color);'
+				+ 'border-radius:20px;padding:4px 12px;margin:0 8px 8px 0;background:var(--card-bg, var(--fg-color));'
+				+ 'text-decoration:none;white-space:nowrap;';
+			if (!url) {
+				return '<span title="' + title + '" style="' + style + 'color:var(--text-muted);">' + inner + '</span>';
+			}
+			const target = url.startsWith('/app/') ? '' : ' target="_blank" rel="noopener"';
+			return '<a href="' + url + '"' + target + ' title="' + title + '" style="' + style + '">' + inner + '</a>';
+		});
+		fld.$wrapper.html('<div style="margin:4px 0 12px;">' + chips.join('') + '</div>');
+	});
+}
+
 frappe.ui.form.on('Service Report', {
 
 
@@ -81,10 +141,14 @@ frappe.ui.form.on('Service Report', {
     onload: function(frm){
         frm.trigger('employee')
         frm.trigger('customer')
-        
+        set_reference_document_type_query(frm);
     },
 	refresh: function(frm) {
         set_link_filters(frm);
+        render_address_card(frm);
+        render_contact_card(frm);
+        render_quick_add_buttons(frm);
+        render_ticket_links(frm);
 
         if (sr_report_Interval != frm.doc.current_sr_report_Interval) {
             clearInterval(sr_report_Interval);
@@ -167,22 +231,6 @@ frappe.ui.form.on('Service Report', {
             frm.change_custom_button_type("Stop Timer", null, "danger");
             frm.disable_save();
         };
-       
-        frappe.call({
-            method: "frappe.client.get_value",
-            args: {
-                doctype: "OTRSConnect User Settings",
-                fieldname: ["zoom_link"]
-            },
-            callback(r) {
-                if(r.message && frm.doc.ofork_ticket_number) {
-                    console.log(r.message);
-                    frm.add_custom_button(__('OTRS Ticket Zoom'), function() {
-                        window.open(r.message["zoom_link"] + frm.doc.ofork_ticket_number, '_blank');
-                    }, __("Ofork Ticket"));
-                }
-            }
-        });
 
         // Button to set selected rows to "Without Surcharge"
         frm.add_custom_button(__('🚫 Selektierte ohne Zuschlag'), function() {
@@ -285,17 +333,6 @@ frappe.ui.form.on('Service Report', {
             }
         });
 
-        // Style Aktionen button like Sales Invoice (itsdave red)
-        setTimeout(() => {
-            frm.$wrapper
-                .find('.inner-group-button[data-label="' + __("Aktionen") + '"] > .btn')
-                .css({
-                    "background-color": "#e73249",
-                    "border-color": "#e73249",
-                    "color": "#fff",
-                });
-        }, 100);
-
     },
 
     "employee": function(frm) {
@@ -383,7 +420,9 @@ frappe.ui.form.on('Service Report', {
     //     },
 
 	customer: function(frm) {
-		erpnext.utils.get_party_details(frm);
+		erpnext.utils.get_party_details(frm, null, null, function() {
+			apply_preferred_customer_address(frm);
+		});
 		set_link_filters(frm);
 	},
 	filter_contact_by_customer: function(frm) {
@@ -394,40 +433,223 @@ frappe.ui.form.on('Service Report', {
 	},
 	customer_address: function(frm) {
 		erpnext.utils.get_address_display(frm);
+		render_address_card(frm);
 	},
 	contact_person: function(frm) {
 		erpnext.utils.get_contact_details(frm);
+		render_contact_card(frm);
 	},
 });
 
 
-frappe.ui.form.on("Service Report Item", {
-    item_code: function(frm, cdt, cdn) {
-        var cur_doc = locals[cdt][cdn];
-        frappe.call({
-            "method": "frappe.client.get",
-            args: {
-                doctype: "Item",
-                name: cur_doc.item_code
-			},
-			callback: function (data) {
-                frappe.model.set_value(cur_doc.item_name = data.message.item_name);
-                frm.refresh_fields();
-			}
-		})
-        
+// Render a styled address card into the read-only "address_card" HTML field.
+function render_address_card(frm) {
+	const fld = frm.fields_dict.address_card;
+	if (!fld) return;
+	const $w = fld.$wrapper;
+	if (!frm.doc.customer_address) {
+		$w.html(
+			'<div class="sr-info-card" style="box-sizing:border-box;margin-bottom:16px;border:1px dashed var(--border-color);border-radius:8px;padding:12px 14px;'
+			+ 'color:var(--text-muted);font-size:13px;">' + __('Keine Adresse ausgewählt') + '</div>'
+		);
+		equalize_info_cards(frm);
+		return;
+	}
+	frappe.db.get_doc('Address', frm.doc.customer_address).then(a => {
+		const esc = frappe.utils.escape_html;
+		const rows = [];
+		const title = frm.doc.customer_name || a.address_title || '';
+		if (title) rows.push('<div style="font-weight:600;font-size:14px;">' + esc(title) + '</div>');
+		if (a.address_line1) rows.push('<div>' + esc(a.address_line1) + '</div>');
+		if (a.address_line2) rows.push('<div>' + esc(a.address_line2) + '</div>');
+		const city = [a.pincode, a.city].filter(Boolean).map(esc).join(' ');
+		if (city) rows.push('<div>' + city + '</div>');
+		if (a.country) rows.push('<div>' + esc(a.country) + '</div>');
+		const contacts = [];
+		if (a.phone) contacts.push('☎ ' + esc(a.phone));
+		if (a.email_id) contacts.push('✉ ' + esc(a.email_id));
+		if (contacts.length) rows.push('<div style="margin-top:6px;color:var(--text-muted);font-size:12px;">' + contacts.join('&nbsp;&nbsp;') + '</div>');
 
+		const maps = 'https://www.google.com/maps/search/?api=1&query='
+			+ encodeURIComponent([a.address_line1, a.address_line2, a.pincode, a.city, a.country].filter(Boolean).join(', '));
+
+		$w.html(
+			'<div class="sr-info-card" style="box-sizing:border-box;margin-bottom:16px;border:1px solid var(--border-color);border-radius:8px;padding:12px 14px;'
+			+ 'background:var(--card-bg, var(--fg-color));display:flex;gap:12px;align-items:flex-start;">'
+			+ '<div style="font-size:22px;line-height:1;">📍</div>'
+			+ '<div style="font-size:13px;line-height:1.55;flex:1;">' + rows.join('') + '</div>'
+			+ '<a href="' + maps + '" target="_blank" title="' + __('In Google Maps öffnen') + '" '
+			+ 'style="font-size:12px;white-space:nowrap;text-decoration:none;">🗺️ ' + __('Karte') + '</a>'
+			+ '</div>'
+		);
+		equalize_info_cards(frm);
+	});
+}
+
+
+// Render a styled contact card (all emails and phone numbers) into "contact_card".
+function render_contact_card(frm) {
+	const fld = frm.fields_dict.contact_card;
+	if (!fld) return;
+	const $w = fld.$wrapper;
+	if (!frm.doc.contact_person) {
+		$w.html(
+			'<div class="sr-info-card" style="box-sizing:border-box;margin-bottom:16px;border:1px dashed var(--border-color);border-radius:8px;padding:12px 14px;'
+			+ 'color:var(--text-muted);font-size:13px;">' + __('Kein Kontakt ausgewählt') + '</div>'
+		);
+		equalize_info_cards(frm);
+		return;
+	}
+	frappe.db.get_doc('Contact', frm.doc.contact_person).then(c => {
+		const esc = frappe.utils.escape_html;
+		const rows = [];
+		const name = [c.salutation, c.first_name, c.last_name].filter(Boolean).map(esc).join(' ') || esc(c.name);
+		rows.push('<div style="font-weight:600;font-size:14px;">' + name + '</div>');
+		const sub = [c.designation, c.company_name].filter(Boolean).map(esc).join(', ');
+		if (sub) rows.push('<div style="color:var(--text-muted);font-size:12px;margin-bottom:4px;">' + esc(sub) + '</div>');
+
+		(c.email_ids || []).forEach(e => {
+			if (!e.email_id) return;
+			const prim = e.is_primary ? ' <span style="color:var(--text-muted);">(' + __('primär') + ')</span>' : '';
+			rows.push('<div>✉ <a href="mailto:' + encodeURIComponent(e.email_id) + '">' + esc(e.email_id) + '</a>' + prim + '</div>');
+		});
+		(c.phone_nos || []).forEach(p => {
+			if (!p.phone) return;
+			const icon = p.is_primary_mobile_no ? '📱' : '☎';
+			rows.push('<div>' + icon + ' <a href="tel:' + encodeURIComponent(p.phone) + '">' + esc(p.phone) + '</a></div>');
+		});
+		if (rows.length === 1) rows.push('<div style="color:var(--text-muted);font-size:12px;">' + __('Keine Kontaktdaten hinterlegt') + '</div>');
+
+		$w.html(
+			'<div class="sr-info-card" style="box-sizing:border-box;margin-bottom:16px;border:1px solid var(--border-color);border-radius:8px;padding:12px 14px;'
+			+ 'background:var(--card-bg, var(--fg-color));display:flex;gap:12px;align-items:flex-start;">'
+			+ '<div style="font-size:22px;line-height:1;">👤</div>'
+			+ '<div style="font-size:13px;line-height:1.55;flex:1;">' + rows.join('') + '</div>'
+			+ '</div>'
+		);
+		equalize_info_cards(frm);
+	});
+}
+
+
+// Make the address and contact cards the same height (align bottoms).
+function equalize_info_cards(frm) {
+	setTimeout(() => {
+		const els = ['address_card', 'contact_card']
+			.map(fn => frm.fields_dict[fn] && frm.fields_dict[fn].$wrapper.find('.sr-info-card')[0])
+			.filter(Boolean);
+		if (els.length < 2) return;
+		els.forEach(el => { el.style.minHeight = ''; });
+		const max = Math.max(...els.map(el => el.offsetHeight));
+		els.forEach(el => { el.style.minHeight = max + 'px'; });
+	}, 60);
+}
+
+
+// Quick-add buttons next to the hours sum: each adds a work position ending now
+// and starting "minutes" ago, with a placeholder description to edit later.
+const QUICK_ADD_DURATIONS = [
+	{ label: '15', minutes: 15 },
+	{ label: '30', minutes: 30 },
+	{ label: '45', minutes: 45 },
+	{ label: '1 Std.', minutes: 60 },
+	{ label: '2 Std.', minutes: 120 },
+];
+
+function render_quick_add_buttons(frm) {
+	const fld = frm.fields_dict.quick_add_buttons;
+	if (!fld) return;
+	const $w = fld.$wrapper.empty();
+	if (frm.doc.docstatus !== 0) return; // only while editable
+	const $row = $('<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end;margin-top:23px;"></div>');
+	$row.append('<span style="font-size:12px;color:var(--text-muted);margin-right:2px;">' + __('Schnell erfassen') + ':</span>');
+	QUICK_ADD_DURATIONS.forEach(d => {
+		const $b = $('<button type="button" class="btn btn-xs btn-default">' + frappe.utils.escape_html(d.label) + '</button>');
+		$b.on('click', () => add_quick_work_position(frm, d.minutes));
+		$row.append($b);
+	});
+	$w.append($row);
+}
+
+function add_quick_work_position(frm, minutes) {
+	const end = frappe.datetime.now_datetime();
+	const begin = moment(end, 'YYYY-MM-DD HH:mm:ss').subtract(minutes, 'minutes').format('YYYY-MM-DD HH:mm:ss');
+	const row = frm.fields_dict.work.grid.add_new_row(); // fires work_add (service_type/employee/address defaults)
+	frappe.model.set_value(row.doctype, row.name, 'begin', begin);
+	frappe.model.set_value(row.doctype, row.name, 'end', end);
+	frappe.model.set_value(row.doctype, row.name, 'description', __('Tätigkeit hier beschreiben …'));
+	frm.refresh_field('work');
+	frappe.show_alert({ message: __('Arbeitsposition ({0} Min.) hinzugefügt', [minutes]), indicator: 'green' });
+}
+
+
+// Prefill customer_address per Fieldservice Settings (billing vs shipping + fallback),
+// overriding the billing-address default set by erpnext.utils.get_party_details.
+function apply_preferred_customer_address(frm) {
+	if (!frm.doc.customer) return;
+	frappe.call({
+		method: "fieldservice.api.get_preferred_customer_address",
+		args: { customer: frm.doc.customer },
+		callback: function(r) {
+			frm.set_value("customer_address", r.message || null);
+		}
+	});
+}
+
+
+// Restrict the reference_document_type picker to the DocTypes configured in
+// Fieldservice Settings (default: Quotation / Sales Order / Delivery Note / Sales Invoice).
+function set_reference_document_type_query(frm) {
+	frappe.call({
+		method: "fieldservice.api.get_reference_document_types",
+		callback: function(r) {
+			const types = r.message || [];
+			frm.set_query("reference_document_type", function() {
+				return { filters: { name: ["in", types] } };
+			});
+		}
+	});
+}
+
+
+// item_name is populated via fetch_from "item_code.item_name" on the
+// Service Report Item doctype; no client-side fetch needed (the old handler
+// called frappe.client.get with an empty item_code -> "Item None not found").
+
+frappe.ui.form.on('Service Report Ticket Reference', {
+    ticket_references_add(frm, cdt, cdn) {
+        load_ticket_systems().then(systems => {
+            const fallback = Object.values(systems).find(s => s.is_default);
+            if (fallback && !frappe.model.get_value(cdt, cdn, 'ticket_system')) {
+                frappe.model.set_value(cdt, cdn, 'ticket_system', fallback.name);
+            }
+        });
+    },
+    ticket_references_remove(frm) {
+        render_ticket_links(frm);
+    },
+    ticket_system(frm) {
+        render_ticket_links(frm);
+    },
+    ticket_reference(frm) {
+        render_ticket_links(frm);
+    },
+    ticket_entry(frm) {
+        render_ticket_links(frm);
+    },
+    subject(frm) {
+        render_ticket_links(frm);
     }
 });
-frappe.ui.form.on('Service Report Work',{ 
+
+frappe.ui.form.on('Service Report Work',{
     work_add(frm, cdt, cdn) {
         let address = frm.doc.customer_address,
             service_type = frm.doc.report_type,
             index = frappe.model.get_value(cdt,cdn,"idx");
-        console.log(service_type);   
-        console.log("Work Item hinzugefügt");
-         
+
         frappe.model.set_value(cdt,cdn,"service_type",service_type);
+        frappe.model.set_value(cdt,cdn,"employee",frm.doc.employee);
         frappe.model.set_value (cdt,cdn,"address" , address);
         if (service_type === "On-Site Service" && index ===1){
             frappe.model.set_value(cdt,cdn,"travel_charges",1);

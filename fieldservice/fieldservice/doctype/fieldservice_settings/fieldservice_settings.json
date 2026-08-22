@@ -7,6 +7,11 @@
  "engine": "InnoDB",
  "field_order": [
   "max_work_duration",
+  "address_prefill_section",
+  "default_address_type",
+  "enable_address_fallback",
+  "service_report_section",
+  "reference_document_types",
   "review_section",
   "review_mode",
   "ai_review_section",
@@ -22,6 +27,38 @@
    "fieldname": "max_work_duration",
    "fieldtype": "Int",
    "label": "Max Work Duration"
+  },
+  {
+   "fieldname": "address_prefill_section",
+   "fieldtype": "Section Break",
+   "label": "Adressen-Vorbelegung"
+  },
+  {
+   "default": "Rechnungsadresse",
+   "description": "Welche Kundenadresse wird beim Anlegen eines Service Reports vorbelegt: die als 'Bevorzugte Rechnungsadresse' (is_primary_address) oder als 'Bevorzugte Lieferadresse' (is_shipping_address) markierte Adresse.",
+   "fieldname": "default_address_type",
+   "fieldtype": "Select",
+   "label": "Bevorzugte Adresse bei Kundenauswahl",
+   "options": "Rechnungsadresse\nLieferadresse"
+  },
+  {
+   "default": "1",
+   "description": "Wenn keine Adresse des bevorzugten Typs existiert, die erste verknuepfte Adresse des Kunden verwenden. Aus: das Adressfeld bleibt leer.",
+   "fieldname": "enable_address_fallback",
+   "fieldtype": "Check",
+   "label": "Fallback auf erste verknuepfte Adresse"
+  },
+  {
+   "fieldname": "service_report_section",
+   "fieldtype": "Section Break",
+   "label": "Service Report"
+  },
+  {
+   "fieldname": "reference_document_types",
+   "fieldtype": "Table MultiSelect",
+   "label": "Erlaubte Bezugsdokumenttypen",
+   "options": "Fieldservice Reference Doctype",
+   "description": "DocTypes, die im Service Report als Bezugsdokumenttyp waehlbar sind. Leer = Standard: Angebot, Auftrag, Lieferschein, Ausgangsrechnung."
   },
   {
    "fieldname": "review_section",
@@ -58,9 +95,9 @@
    "fieldname": "ai_model",
    "fieldtype": "Select",
    "label": "Modell",
-   "default": "claude-sonnet-4-20250514",
+   "default": "claude-sonnet-4-6",
    "depends_on": "enable_ai_review",
-   "options": "claude-sonnet-4-20250514"
+   "options": "claude-opus-4-8\nclaude-sonnet-4-6\nclaude-haiku-4-5-20251001\nclaude-sonnet-4-20250514"
   },
   {
    "fieldname": "ai_system_prompt",
@@ -73,7 +110,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2022-04-03 21:53:40.399703",
+ "modified": "2026-05-31 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "Fieldservice",
  "name": "Fieldservice Settings",

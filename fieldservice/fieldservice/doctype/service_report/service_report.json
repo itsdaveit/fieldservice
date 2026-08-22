@@ -11,32 +11,40 @@
   "timer",
   "report_data_section",
   "employee",
+  "employee_name",
+  "column_break_emp_cust",
   "customer",
-  "contact_person",
-  "filter_contact_by_customer",
+  "customer_name",
+  "section_break_addr_contact",
   "customer_address",
   "filter_address_by_customer",
+  "address_card",
   "section_break_3",
-  "employee_name",
-  "customer_name",
+  "contact_person",
+  "filter_contact_by_customer",
   "contact_email",
+  "contact_card",
   "address_display",
   "auftragsdetails",
-  "externe_auftragsnummer",
   "auftrag",
   "section_break_9",
   "report_type",
+  "externe_auftragsnummer",
   "column_break_17",
   "reference_document_type",
   "reference_document_id",
+  "tickets_section",
+  "ticket_references",
+  "ticket_links",
   "work_performed_section",
   "work",
+  "hours_summary_section",
   "hours_sum",
+  "column_break_quickadd",
+  "quick_add_buttons",
   "items_delivered_section",
   "scan_barcode",
   "items",
-  "checklists_section",
-  "checklists",
   "remarks_section",
   "remarks",
   "signatures_section",
@@ -53,15 +61,13 @@
   "aditional_info_section",
   "timer_status",
   "timer_start",
-  "ofork_ticket_number",
   "ai_reviews_section",
   "ai_reviews"
  ],
  "fields": [
   {
    "fieldname": "report_data_section",
-   "fieldtype": "Section Break",
-   "label": "Report Data"
+   "fieldtype": "Section Break"
   },
   {
    "fieldname": "employee",
@@ -77,6 +83,19 @@
    "in_standard_filter": 1,
    "label": "Customer",
    "options": "Customer"
+  },
+  {
+   "fieldname": "column_break_emp_cust",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_break_addr_contact",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "address_card",
+   "fieldtype": "HTML",
+   "label": "Adresse"
   },
   {
    "fieldname": "section_break_3",
@@ -98,8 +117,7 @@
   },
   {
    "fieldname": "section_break_9",
-   "fieldtype": "Section Break",
-   "label": "Report Parameters"
+   "fieldtype": "Section Break"
   },
   {
    "allow_in_quick_entry": 1,
@@ -111,8 +129,7 @@
   },
   {
    "fieldname": "work_performed_section",
-   "fieldtype": "Section Break",
-   "label": "Work Performed"
+   "fieldtype": "Section Break"
   },
   {
    "fieldname": "work",
@@ -122,8 +139,7 @@
   },
   {
    "fieldname": "items_delivered_section",
-   "fieldtype": "Section Break",
-   "label": "Items Delivered"
+   "fieldtype": "Section Break"
   },
   {
    "fieldname": "items",
@@ -155,12 +171,10 @@
    "label": "Signature Technician"
   },
   {
-   "description": "Signature of executing employee",
    "fieldname": "column_break_8",
    "fieldtype": "Column Break"
   },
   {
-   "description": "Signature of entitled customer employee",
    "fieldname": "technician",
    "fieldtype": "Signature",
    "label": "Signature Customer"
@@ -189,6 +203,7 @@
   {
    "fieldname": "address_display",
    "fieldtype": "Read Only",
+   "hidden": 1,
    "label": "Address Name"
   },
   {
@@ -207,7 +222,13 @@
    "fetch_from": "contact_person.email_id",
    "fieldname": "contact_email",
    "fieldtype": "Read Only",
+   "hidden": 1,
    "label": "Contact E-Mail"
+  },
+  {
+   "fieldname": "contact_card",
+   "fieldtype": "HTML",
+   "label": "Kontakt"
   },
   {
    "allow_in_quick_entry": 1,
@@ -225,6 +246,7 @@
    "read_only": 1
   },
   {
+   "collapsible": 1,
    "fieldname": "mandatory_section_section",
    "fieldtype": "Section Break",
    "label": "Mandatory Section"
@@ -234,7 +256,8 @@
    "fieldname": "delivery_note",
    "fieldtype": "Link",
    "label": "Delivery Note",
-   "options": "Delivery Note"
+   "options": "Delivery Note",
+   "read_only": 1
   },
   {
    "allow_on_submit": 1,
@@ -246,6 +269,7 @@
    "no_copy": 1,
    "options": "Draft\nSubmitted\nDelivered\nStarted\nBlub",
    "print_hide": 1,
+   "read_only": 1,
    "search_index": 1
   },
   {
@@ -258,17 +282,19 @@
    "default": "stopped",
    "fieldname": "timer_status",
    "fieldtype": "Data",
+   "hidden": 1,
    "label": "Timer Status"
   },
   {
    "fieldname": "timer_start",
    "fieldtype": "Datetime",
+   "hidden": 1,
    "label": "Timer Start"
   },
   {
-   "collapsible": 1,
    "fieldname": "aditional_info_section",
    "fieldtype": "Section Break",
+   "hidden": 1,
    "label": "Aditional Info"
   },
   {
@@ -282,9 +308,23 @@
    "options": "<div class=\"container\" id=\"timer\"></div>"
   },
   {
+   "fieldname": "hours_summary_section",
+   "fieldtype": "Section Break"
+  },
+  {
    "fieldname": "hours_sum",
    "fieldtype": "Float",
-   "label": "Hours Sum"
+   "label": "Hours Sum",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_quickadd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "quick_add_buttons",
+   "fieldtype": "HTML",
+   "label": "Schnellerfassung"
   },
   {
    "fieldname": "reference_document_type",
@@ -303,20 +343,8 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "checklists_section",
-   "fieldtype": "Section Break",
-   "label": "Checklists"
-  },
-  {
-   "fieldname": "checklists",
-   "fieldtype": "Table",
-   "label": "Checklists",
-   "options": "Service Report Connected Checklist"
-  },
-  {
    "fieldname": "auftragsdetails",
-   "fieldtype": "Section Break",
-   "label": "Auftragsdetails"
+   "fieldtype": "Section Break"
   },
   {
    "fieldname": "auftrag",
@@ -341,11 +369,6 @@
    "options": "<p style=\"text-align: center;\">Unterschrift Kunde</p>"
   },
   {
-   "fieldname": "ofork_ticket_number",
-   "fieldtype": "Data",
-   "label": "Ofork Ticket Number"
-  },
-  {
    "collapsible": 1,
    "fieldname": "ai_reviews_section",
    "fieldtype": "Section Break",
@@ -358,12 +381,32 @@
    "hidden": 1,
    "label": "KI-Reviews",
    "options": "Service Report AI Review"
+  },
+  {
+   "collapsible": 1,
+   "collapsible_depends_on": "eval:doc.ticket_references && doc.ticket_references.length",
+   "fieldname": "tickets_section",
+   "fieldtype": "Section Break",
+   "label": "Tickets"
+  },
+  {
+   "description": "Tickets this service report relates to. Positions can carry their own ticket; those are collected here automatically on save.",
+   "fieldname": "ticket_references",
+   "fieldtype": "Table",
+   "label": "Ticket References",
+   "options": "Service Report Ticket Reference"
+  },
+  {
+   "depends_on": "eval:doc.ticket_references && doc.ticket_references.length",
+   "fieldname": "ticket_links",
+   "fieldtype": "HTML",
+   "label": "Ticket Links"
   }
  ],
  "grid_page_length": 50,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-13 12:28:37.794663",
+ "modified": "2026-05-30 13:10:00.000000",
  "modified_by": "b.trzensiok@itsdave.de",
  "module": "Fieldservice",
  "name": "Service Report",

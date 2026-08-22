@@ -11,6 +11,7 @@ from frappe.contacts.doctype.address.address import get_address_display
 from fieldservice.api import get_amount_of_hours
 from fieldservice.validation import validate_service_report
 from fieldservice.review_pipeline import build_default_pipeline
+from fieldservice.tickets import sync_ticket_references
 
 class ServiceReport(Document):
 	def on_submit(self):
@@ -76,6 +77,9 @@ class ServiceReport(Document):
 			self.address_display = get_address_display(self.customer_address)
 		elif not self.customer_address:
 			self.address_display = ""
+
+		# Collect ticket references named on work positions
+		sync_ticket_references(self)
 
 		# Calculate hours
 		hours_list = []
@@ -265,7 +269,7 @@ def run_llm_review(service_report):
 		doc.save()
 
 	# Run LLM step
-	model = getattr(settings, 'ai_model', None) or 'claude-sonnet-4-20250514'
+	model = getattr(settings, 'ai_model', None) or 'claude-sonnet-4-6'
 	system_prompt = getattr(settings, 'ai_system_prompt', None) or ''
 
 	step = LLMTextCorrectionStep(api_key, model, system_prompt)

@@ -67,24 +67,20 @@ def get_surcharge_item_description(item_code,description, begin, end):
 
 def get_items_from_sr_work(work_positions, report_doc):
     delivery_note_items = []
-    employee_item = frappe.get_all('Employee Item Assignment', 
-                                    filters={'employee': report_doc.employee,
-                                            'service_type': report_doc.report_type},
-                                    fields={'name', 'item'}
-                                    )
-    if len(employee_item) != 1:
-        frappe.throw(_('Employee Item Assignment ambiguous or not found.'))
-    
-    
-    item_code = employee_item[0].item
-    #print( "########### " + item_code)
 
-    
     for work_position in work_positions:
-        settings = frappe.get_single("Fieldservice Settings")
-        print("Work Position Details")
-        print(work_position.service_type,work_position.travel_charges)
-        if work_position.service_type != "Remote Service" and work_position.travel_charges == 1:
+        eff_employee = work_position.employee or report_doc.employee
+        eff_service_type = work_position.service_type or report_doc.report_type
+
+        employee_item = frappe.get_all('Employee Item Assignment',
+                                        filters={'employee': eff_employee,
+                                                 'service_type': eff_service_type},
+                                        fields=['name', 'item'])
+        if len(employee_item) != 1:
+            frappe.throw(_('Employee Item Assignment ambiguous or not found for work position {0} (employee {1}, service type {2}).').format(work_position.idx, eff_employee, eff_service_type))
+        item_code = employee_item[0].item
+
+        if eff_service_type != "Remote Service" and work_position.travel_charges == 1:
             if work_position.address:
                 travel_costs_item = create_travel_item(work_position.address, report_doc, work_position)
             else:
@@ -139,6 +135,67 @@ def create_travel_item(address, report_doc=None, work_position=None):
     else:
         return False
     
+
+
+@frappe.whitelist()
+def get_preferred_customer_address(customer):
+    """Return the address to prefill on a Service Report for the given customer,
+    honouring Fieldservice Settings:
+      - default_address_type: "Rechnungsadresse" (is_primary_address) or
+        "Lieferadresse" (is_shipping_address)
+      - enable_address_fallback: if no address of the preferred type is flagged,
+        fall back to the first linked address; otherwise return None.
+    """
+    if not customer:
+        return None
+
+    settings = frappe.get_single("Fieldservice Settings")
+    pref = settings.get("default_address_type") or "Rechnungsadresse"
+    flag = "is_shipping_address" if pref == "Lieferadresse" else "is_primary_address"
+    fallback = settings.get("enable_address_fallback")
+
+    base_filters = [
+        ["Dynamic Link", "link_doctype", "=", "Customer"],
+        ["Dynamic Link", "link_name", "=", customer],
+        ["disabled", "=", 0],
+    ]
+
+    flagged = frappe.get_all(
+        "Address",
+        filters=base_filters + [[flag, "=", 1]],
+        order_by="modified desc",
+        pluck="name",
+        limit=1,
+    )
+    if flagged:
+        return flagged[0]
+
+    if fallback:
+        any_addr = frappe.get_all(
+            "Address",
+            filters=base_filters,
+            order_by="creation asc",
+            pluck="name",
+            limit=1,
+        )
+        return any_addr[0] if any_addr else None
+
+    return None
+
+
+DEFAULT_REFERENCE_DOCTYPES = ["Quotation", "Sales Order", "Delivery Note", "Sales Invoice"]
+
+
+@frappe.whitelist()
+def get_reference_document_types():
+    """DocTypes selectable as Service Report reference document type.
+    Configurable via Fieldservice Settings; falls back to the defaults
+    (Quotation / Sales Order / Delivery Note / Sales Invoice) when unset."""
+    settings = frappe.get_single("Fieldservice Settings")
+    types = [r.document_type for r in (settings.get("reference_document_types") or []) if r.document_type]
+    if not types:
+        types = [dt for dt in DEFAULT_REFERENCE_DOCTYPES if frappe.db.exists("DocType", dt)]
+    return types
 
 
 def get_items_from_sr_items(items):
@@ -325,9 +382,15 @@ def insert_surchargs_in_delivery_note(service_report):
     if a:
         service_report_doc = frappe.get_doc("Service Report", service_report)
         employee = service_report_doc.employee
+        # Effective employee per work position (override or header), keyed by work position name
+        wp_employee_map = {wp.name: (wp.employee or service_report_doc.employee) for wp in service_report_doc.work}
         delivery_note = frappe.get_doc("Delivery Note", service_report_doc.delivery_note)
         customer_doc = frappe.get_doc("Customer", delivery_note.customer)
         surcharges_fur_current_surcharge_Determination = get_surcharges_fur_current_surcharge_Determination(customer_doc)
+        # No surcharge rules configured (e.g. Customer.surcharge_determination == "None"):
+        # the delivery note is already complete, skip surcharge processing.
+        if not surcharges_fur_current_surcharge_Determination:
+            return
         delivery_note_items = delivery_note.items
         delivery_note_items_copy = delivery_note_items.copy()
         delivery_note.ignore_pricing_rule = 1
@@ -346,7 +409,8 @@ def insert_surchargs_in_delivery_note(service_report):
                 start_surcharge = get_start_surcharge(surcharges_timeline, item)
                 relevant_surcharge_dict = get_surcharges_timeline(surcharges_fur_current_surcharge_Determination, item)[1]
                 surcharge_dict = create_surcharge_dict_for_work(relevant_surcharge_dict, sorted_work_time_line, start_surcharge, delivery_note)
-                surcharge_item = get_item_from_surcharge_in_percent(surcharge_dict, employee)
+                wp_employee = wp_employee_map.get(item.against_service_report_item, employee)
+                surcharge_item = get_item_from_surcharge_in_percent(surcharge_dict, wp_employee)
 
                 if len(surcharge_item) > 0:
                     for el in surcharge_item:
@@ -508,14 +572,14 @@ def get_service_report_work_times(start, end, employees=None):
             sr.customer,
             sr.customer_name,
             sr.titel as title,
-            sr.employee,
+            COALESCE(srw.employee, sr.employee) as employee,
             e.employee_name
         FROM `tabService Report Work` srw
         INNER JOIN `tabService Report` sr ON srw.parent = sr.name
-        INNER JOIN `tabEmployee` e ON sr.employee = e.name
+        INNER JOIN `tabEmployee` e ON COALESCE(srw.employee, sr.employee) = e.name
         WHERE srw.begin >= %(start)s
         AND srw.begin <= %(end)s
-        AND sr.employee IN %(employees)s
+        AND COALESCE(srw.employee, sr.employee) IN %(employees)s
         ORDER BY srw.begin
     """, {
         "start": start,

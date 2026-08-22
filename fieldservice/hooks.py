@@ -4,7 +4,7 @@ from . import __version__ as app_version
 
 app_name = "fieldservice"
 app_title = "Fieldservice"
-app_publisher = "itsdve GmbH"
+app_publisher = "Fieldservice"
 app_description = "manage field service"
 app_icon = "octicon octicon-file-directory"
 app_color = "grey"
@@ -59,6 +59,11 @@ app_include_js = [
 
 # before_install = "fieldservice.install.before_install"
 # after_install = "fieldservice.install.after_install"
+
+after_migrate = [
+    "fieldservice.setup.sync_checklist_field",
+    "fieldservice.setup.seed_reference_document_types",
+]
 
 # Desk Notifications
 # ------------------
