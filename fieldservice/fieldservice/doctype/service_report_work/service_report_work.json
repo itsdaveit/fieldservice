@@ -19,7 +19,11 @@
   "address",
   "ignore_surcharges",
   "without_surcharge_reason",
-  "internal_remarks"
+  "internal_remarks",
+  "ticket_section",
+  "ticket_reference",
+  "column_break_ticket",
+  "ticket_entry"
  ],
  "fields": [
   {
@@ -120,6 +124,27 @@
    "fieldname": "without_surcharge_reason",
    "fieldtype": "Small Text",
    "label": "Without Surcharge Reason"
+  },
+  {
+   "fieldname": "ticket_section",
+   "fieldtype": "Section Break",
+   "label": "Ticket"
+  },
+  {
+   "description": "Ticket this position was worked on. Collected into the report's ticket references on save.",
+   "fieldname": "ticket_reference",
+   "fieldtype": "Data",
+   "label": "Ticket"
+  },
+  {
+   "fieldname": "column_break_ticket",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Optional entry inside the ticket (article, comment, time entry).",
+   "fieldname": "ticket_entry",
+   "fieldtype": "Data",
+   "label": "Ticket Entry"
   }
  ],
  "grid_page_length": 50,

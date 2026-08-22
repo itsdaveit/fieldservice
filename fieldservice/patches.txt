@@ -1,0 +1,4 @@
+[pre_model_sync]
+
+[post_model_sync]
+fieldservice.patches.v1_0.migrate_legacy_ticket_references

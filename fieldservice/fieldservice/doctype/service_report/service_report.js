@@ -59,6 +59,66 @@ function set_link_filters(frm) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Ticket references
+// ---------------------------------------------------------------------------
+
+// Enabled ticket systems, fetched once per form session.
+let sr_ticket_systems = null;
+
+function load_ticket_systems() {
+	if (sr_ticket_systems) return Promise.resolve(sr_ticket_systems);
+	return frappe.call({ method: 'fieldservice.tickets.get_ticket_systems' }).then(r => {
+		sr_ticket_systems = {};
+		(r.message || []).forEach(sys => { sr_ticket_systems[sys.name] = sys; });
+		return sr_ticket_systems;
+	});
+}
+
+function build_ticket_url(system, reference, entry) {
+	if (!system || !reference) return null;
+	if (entry && system.entry_url_template) {
+		return system.entry_url_template.replace('{id}', reference).replace('{entry}', entry);
+	}
+	if (system.local_doctype) {
+		return '/app/' + frappe.router.slug(system.local_doctype) + '/' + encodeURIComponent(reference);
+	}
+	if (system.ticket_url_template) {
+		return system.ticket_url_template.replace('{id}', encodeURIComponent(reference));
+	}
+	return null;
+}
+
+// Render the report's ticket references as clickable chips.
+function render_ticket_links(frm) {
+	const fld = frm.fields_dict.ticket_links;
+	if (!fld) return;
+	const rows = (frm.doc.ticket_references || []).filter(r => r.ticket_reference);
+	if (!rows.length) {
+		fld.$wrapper.empty();
+		return;
+	}
+	load_ticket_systems().then(systems => {
+		const esc = frappe.utils.escape_html;
+		const chips = rows.map(row => {
+			const system = systems[row.ticket_system];
+			const url = build_ticket_url(system, row.ticket_reference, row.ticket_entry);
+			const label = esc(row.ticket_reference) + (row.ticket_entry ? ' <span style="opacity:.6;">#' + esc(row.ticket_entry) + '</span>' : '');
+			const title = [row.ticket_system, row.subject].filter(Boolean).map(esc).join(' — ');
+			const inner = '<span style="font-size:13px;">🎫 ' + label + '</span>';
+			const style = 'display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border-color);'
+				+ 'border-radius:20px;padding:4px 12px;margin:0 8px 8px 0;background:var(--card-bg, var(--fg-color));'
+				+ 'text-decoration:none;white-space:nowrap;';
+			if (!url) {
+				return '<span title="' + title + '" style="' + style + 'color:var(--text-muted);">' + inner + '</span>';
+			}
+			const target = url.startsWith('/app/') ? '' : ' target="_blank" rel="noopener"';
+			return '<a href="' + url + '"' + target + ' title="' + title + '" style="' + style + '">' + inner + '</a>';
+		});
+		fld.$wrapper.html('<div style="margin:4px 0 12px;">' + chips.join('') + '</div>');
+	});
+}
+
 frappe.ui.form.on('Service Report', {
 
 
@@ -88,6 +148,7 @@ frappe.ui.form.on('Service Report', {
         render_address_card(frm);
         render_contact_card(frm);
         render_quick_add_buttons(frm);
+        render_ticket_links(frm);
 
         if (sr_report_Interval != frm.doc.current_sr_report_Interval) {
             clearInterval(sr_report_Interval);
@@ -554,6 +615,32 @@ function set_reference_document_type_query(frm) {
 // item_name is populated via fetch_from "item_code.item_name" on the
 // Service Report Item doctype; no client-side fetch needed (the old handler
 // called frappe.client.get with an empty item_code -> "Item None not found").
+
+frappe.ui.form.on('Service Report Ticket Reference', {
+    ticket_references_add(frm, cdt, cdn) {
+        load_ticket_systems().then(systems => {
+            const fallback = Object.values(systems).find(s => s.is_default);
+            if (fallback && !frappe.model.get_value(cdt, cdn, 'ticket_system')) {
+                frappe.model.set_value(cdt, cdn, 'ticket_system', fallback.name);
+            }
+        });
+    },
+    ticket_references_remove(frm) {
+        render_ticket_links(frm);
+    },
+    ticket_system(frm) {
+        render_ticket_links(frm);
+    },
+    ticket_reference(frm) {
+        render_ticket_links(frm);
+    },
+    ticket_entry(frm) {
+        render_ticket_links(frm);
+    },
+    subject(frm) {
+        render_ticket_links(frm);
+    }
+});
 
 frappe.ui.form.on('Service Report Work',{
     work_add(frm, cdt, cdn) {

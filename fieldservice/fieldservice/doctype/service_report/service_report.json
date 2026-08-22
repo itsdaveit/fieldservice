@@ -33,6 +33,9 @@
   "column_break_17",
   "reference_document_type",
   "reference_document_id",
+  "tickets_section",
+  "ticket_references",
+  "ticket_links",
   "work_performed_section",
   "work",
   "hours_summary_section",
@@ -378,6 +381,26 @@
    "hidden": 1,
    "label": "KI-Reviews",
    "options": "Service Report AI Review"
+  },
+  {
+   "collapsible": 1,
+   "collapsible_depends_on": "eval:doc.ticket_references && doc.ticket_references.length",
+   "fieldname": "tickets_section",
+   "fieldtype": "Section Break",
+   "label": "Tickets"
+  },
+  {
+   "description": "Tickets this service report relates to. Positions can carry their own ticket; those are collected here automatically on save.",
+   "fieldname": "ticket_references",
+   "fieldtype": "Table",
+   "label": "Ticket References",
+   "options": "Service Report Ticket Reference"
+  },
+  {
+   "depends_on": "eval:doc.ticket_references && doc.ticket_references.length",
+   "fieldname": "ticket_links",
+   "fieldtype": "HTML",
+   "label": "Ticket Links"
   }
  ],
  "grid_page_length": 50,
