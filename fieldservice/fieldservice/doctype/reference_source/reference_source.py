@@ -50,10 +50,20 @@ class ReferenceSource(Document):
 			)
 
 
-def get_default_reference_source():
-	"""Name of the default reference source, or the only enabled one."""
-	default = frappe.db.get_value("Reference Source", {"is_default": 1, "enabled": 1}, "name")
+def get_default_reference_source(source_type=None):
+	"""Name of the default reference source, or the only enabled one.
+
+	Pass source_type to stay within one kind — work positions carry plain
+	text, so they must never be filed under a document source, which would
+	turn the text into a Dynamic Link pointing at a document that does not
+	exist."""
+	filters = {"enabled": 1}
+	if source_type:
+		filters["source_type"] = source_type
+
+	default = frappe.db.get_value("Reference Source", dict(filters, is_default=1), "name")
 	if default:
 		return default
-	enabled = frappe.get_all("Reference Source", filters={"enabled": 1}, pluck="name", limit=2)
+
+	enabled = frappe.get_all("Reference Source", filters=filters, pluck="name", limit=2)
 	return enabled[0] if len(enabled) == 1 else None

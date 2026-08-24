@@ -21,7 +21,7 @@
    "in_list_view": 1,
    "label": "Source",
    "options": "Reference Source",
-   "reqd": 1
+   "description": "Optional. Without a source the reference is plain text; a source adds deep links and validation."
   },
   {
    "fetch_from": "source.source_type",
@@ -29,7 +29,8 @@
    "fieldtype": "Data",
    "hidden": 1,
    "label": "Source Type",
-   "read_only": 1
+   "read_only": 1,
+   "default": "External System"
   },
   {
    "fetch_from": "source.document_type",
@@ -42,7 +43,7 @@
   },
   {
    "columns": 3,
-   "depends_on": "eval:doc.source_type!='External System'",
+   "depends_on": "eval:doc.source_type=='Document'",
    "fieldname": "document_name",
    "fieldtype": "Dynamic Link",
    "in_list_view": 1,
@@ -51,7 +52,7 @@
   },
   {
    "columns": 2,
-   "depends_on": "eval:doc.source_type=='External System'",
+   "depends_on": "eval:doc.source_type!='Document'",
    "fieldname": "external_id",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -59,7 +60,7 @@
   },
   {
    "columns": 1,
-   "depends_on": "eval:doc.source_type=='External System'",
+   "depends_on": "eval:doc.source_type!='Document'",
    "description": "Optional reference to a single entry inside the record (article, comment, time entry).",
    "fieldname": "external_entry",
    "fieldtype": "Data",

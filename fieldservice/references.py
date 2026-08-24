@@ -44,10 +44,17 @@ def sync_references(doc):
 			continue
 
 		if default_source is None:
-			default_source = get_default_reference_source() or ""
+			# Positions carry plain text, so only an external source fits.
+			default_source = get_default_reference_source("External System") or ""
 
-		row = doc.append("references", {"source": default_source or None})
-		_fill_reference(row, reference)
+		doc.append(
+			"references",
+			{
+				"source": default_source or None,
+				"source_type": "External System",
+				"external_id": reference,
+			},
+		)
 		known.add(reference)
 
 	# Drop rows that lost their reference, renumber the rest
@@ -59,22 +66,16 @@ def sync_references(doc):
 	validate_references(doc)
 
 
-def _fill_reference(row, reference):
-	"""Put the reference into the field its source calls for."""
-	source = get_source(row.source)
-	row.source_type = (source or {}).get("source_type") or "External System"
-	if source and source.get("source_type") == "Document":
-		row.document_type = source.get("document_type")
-		row.document_name = reference
-	else:
-		row.external_id = reference
-
-
 def validate_references(doc):
 	"""Check external references against the ID pattern of their source."""
 	for row in doc.get("references") or []:
 		source = get_source(row.source)
 		if not source:
+			# No source (or a disabled one): a plain text reference, which is
+			# what an unconfigured site works with. Nothing to validate, but
+			# the row must not masquerade as a document link.
+			if not row.document_name:
+				row.source_type = "External System"
 			continue
 
 		# The grid decides by source_type which column to show, so never
