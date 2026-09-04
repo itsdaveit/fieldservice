@@ -144,8 +144,25 @@ frappe.ui.form.on('Service Report', {
 
     onload: function(frm){
         frm.trigger('employee')
-        frm.trigger('customer')
+        // Only prefill from the customer on new reports. On a saved report the
+        // customer trigger would re-run get_party_details and the preferred
+        // address lookup, overwriting stored values (ITSD-22490).
+        if (frm.is_new()) {
+            frm.trigger('customer')
+        } else {
+            set_link_filters(frm)
+        }
     },
+	before_submit: function(frm) {
+		// Mirror check_empty_work_item_address in validation.py, but offer to fix
+		// it instead of just refusing the submit.
+		const missing = (frm.doc.work || []).filter(
+			r => r.service_type === 'On-Site Service' && r.travel_charges && !r.address
+		);
+		if (!missing.length) return;
+		frappe.validated = false;
+		offer_missing_work_addresses(frm, missing);
+	},
 	refresh: function(frm) {
         set_link_filters(frm);
         render_address_card(frm);
@@ -586,6 +603,56 @@ function add_quick_work_position(frm, minutes) {
 }
 
 
+
+// Work positions charging travel need an address, otherwise the submit is
+// refused by check_empty_work_item_address. Offer to fill them from the
+// report's own address rather than making the user edit every row by hand.
+function offer_missing_work_addresses(frm, missing) {
+	const positions = missing.map(r => r.idx).join(', ');
+	const customer_link = frm.doc.customer
+		? ' <a href="/app/customer/' + encodeURIComponent(frm.doc.customer) + '">' + __('Kunde öffnen') + '</a>'
+		: '';
+	const info =
+		'<div style="font-size:13px;line-height:1.6;">'
+		+ __('Position(en) {0} berechnen Anfahrt, haben aber keine Adresse.', ['<strong>' + positions + '</strong>'])
+		+ '<br>'
+		+ (frm.doc.customer_address
+			? __('Die Adresse aus dem Berichtskopf ist unten vorgeschlagen.')
+			: '<span style="color:var(--text-muted);">' + __('Der Berichtskopf hat selbst keine Adresse.') + customer_link + '</span>')
+		+ '</div>';
+
+	const d = new frappe.ui.Dialog({
+		title: __('Adresse fehlt'),
+		fields: [
+			{ fieldtype: 'HTML', fieldname: 'info', options: info },
+			{
+				fieldtype: 'Link',
+				fieldname: 'address',
+				label: __('Adresse für diese Position(en)'),
+				options: 'Address',
+				reqd: 1,
+				default: frm.doc.customer_address || '',
+				get_query: function() {
+					return {
+						query: 'frappe.contacts.doctype.address.address.address_query',
+						filters: { link_doctype: 'Customer', link_name: frm.doc.customer }
+					};
+				}
+			}
+		],
+		primary_action_label: __('Übernehmen und buchen'),
+		primary_action: function(values) {
+			d.hide();
+			missing.forEach(r => frappe.model.set_value(r.doctype, r.name, 'address', values.address));
+			if (!frm.doc.customer_address) {
+				frm.set_value('customer_address', values.address);
+			}
+			frm.save().then(() => frm.savesubmit());
+		}
+	});
+	d.show();
+}
+
 // Prefill customer_address per Fieldservice Settings (billing vs shipping + fallback),
 // overriding the billing-address default set by erpnext.utils.get_party_details.
 function apply_preferred_customer_address(frm) {
@@ -594,7 +661,12 @@ function apply_preferred_customer_address(frm) {
 		method: "fieldservice.api.get_preferred_customer_address",
 		args: { customer: frm.doc.customer },
 		callback: function(r) {
-			frm.set_value("customer_address", r.message || null);
+			// Never clear the field: get_party_details has already put the
+			// customer's default address there, and a customer without a
+			// flagged preferred address must not end up with no address at all.
+			if (r.message) {
+				frm.set_value("customer_address", r.message);
+			}
 		}
 	});
 }
@@ -784,6 +856,7 @@ function show_change_service_type_dialog(frm, selected_rows) {
             }
 
             let travel_set_for_pos_1 = false;
+            let addresses_filled = 0;
 
             rows.forEach(function(row) {
                 frappe.model.set_value(row.doctype, row.name, 'service_type', new_type);
@@ -791,6 +864,11 @@ function show_change_service_type_dialog(frm, selected_rows) {
                 if (new_type === 'On-Site Service' && row.idx === 1 && !row.travel_charges) {
                     frappe.model.set_value(row.doctype, row.name, 'travel_charges', 1);
                     travel_set_for_pos_1 = true;
+                }
+                // On-Site positions need an address; take the report's own if the row has none
+                if (new_type === 'On-Site Service' && !row.address && frm.doc.customer_address) {
+                    frappe.model.set_value(row.doctype, row.name, 'address', frm.doc.customer_address);
+                    addresses_filled += 1;
                 }
             });
 
@@ -800,6 +878,9 @@ function show_change_service_type_dialog(frm, selected_rows) {
             let msg = __('Service-Typ für {0} Zeile(n) auf "{1}" geändert', [rows.length, new_type]);
             if (travel_set_for_pos_1) {
                 msg += ' — ' + __('Anfahrt für Position 1 aktiviert');
+            }
+            if (addresses_filled) {
+                msg += ' — ' + __('Adresse aus dem Berichtskopf für {0} Position(en) übernommen', [addresses_filled]);
             }
             frappe.show_alert({ message: msg, indicator: 'green' });
         }
@@ -831,6 +912,22 @@ function show_change_service_type_dialog(frm, selected_rows) {
                 html =
                     '<div style="margin-top:8px;padding:10px 14px;border:1px solid #bbdefb;border-left:4px solid #1976d2;border-radius:4px;background:#e3f2fd;font-size:13px;color:#0d47a1;">'
                     + 'ℹ <strong>Position 1</strong> wechselt von <em>On-Site</em> auf <em>'+val+'</em>. Die zuvor gesetzte <strong>Anfahrt</strong> bleibt unverändert und sollte ggf. manuell entfernt werden.'
+                    + '</div>';
+            }
+        }
+
+        // On-Site positions without an address: say what will happen with them
+        if (val === 'On-Site Service') {
+            let without_address = rows.filter(r => !r.address).length;
+            if (without_address && frm.doc.customer_address) {
+                html +=
+                    '<div style="margin-top:8px;padding:10px 14px;border:1px solid #c8e6c9;border-left:4px solid #2e7d32;border-radius:4px;background:#e8f5e9;font-size:13px;color:#1b5e20;">'
+                    + '📍 ' + __('{0} Position(en) ohne Adresse — die <strong>Adresse aus dem Berichtskopf</strong> wird übernommen.', [without_address])
+                    + '</div>';
+            } else if (without_address) {
+                html +=
+                    '<div style="margin-top:8px;padding:10px 14px;border:1px solid #ffcdd2;border-left:4px solid #c62828;border-radius:4px;background:#ffebee;font-size:13px;color:#b71c1c;">'
+                    + '⚠ ' + __('{0} Position(en) haben keine Adresse und der Berichtskopf auch nicht — das Buchen wird sonst abgelehnt.', [without_address])
                     + '</div>';
             }
         }

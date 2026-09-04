@@ -53,7 +53,7 @@ def check_empty_work_item_address(report_doc):
     errors = []
     for work_position in report_doc.work:
         if work_position.service_type == "On-Site Service" and work_position.travel_charges == 1 and not work_position.address:
-            errors.append(_("No work item address found. Work Item No.: {}").format(str(work_position.idx)))
+            errors.append(_("Work position {} is charged with travel costs but has no address.").format(str(work_position.idx)))
     return errors
 
 def check_empty_service_type(report_doc):

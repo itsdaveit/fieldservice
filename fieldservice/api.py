@@ -81,14 +81,14 @@ def get_items_from_sr_work(work_positions, report_doc):
         item_code = employee_item[0].item
 
         if eff_service_type != "Remote Service" and work_position.travel_charges == 1:
-            if work_position.address:
-                travel_costs_item = create_travel_item(work_position.address, report_doc, work_position)
-            else:
-                travel_costs_item = create_travel_item(report_doc.customer_address, report_doc, work_position)
+            travel_address = work_position.address or report_doc.customer_address
+            if not travel_address:
+                frappe.throw(_("Work position {0} is charged with travel costs, but neither the position nor the report has an address.").format(work_position.idx))
+            travel_costs_item = create_travel_item(travel_address, report_doc, work_position)
             if travel_costs_item:
                 delivery_note_items.append(travel_costs_item)
             else:
-                frappe.throw(_("No route item has been added for the selected address <a href=\"/app/address/{0}\">{1}</a>").format(work_position.address, work_position.address))
+                frappe.throw(_("No route item has been added for the selected address <a href=\"/app/address/{0}\">{1}</a>").format(travel_address, travel_address))
 
                 #frappe.throw("Zu der ausgewählten Adresse <a href=\"/app/address/" + work_position.address + "\">" + work_position.address +"</a> wurde noch kein Anfahrt-Item hinzugefügt")
               
