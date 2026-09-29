@@ -336,6 +336,9 @@ def create_delivery_note(service_report):
                 print(item.item_code, item.name, item.qty)
 
             DN = frappe.get_doc("Delivery Note", delivery_note_doc.insert().name)
+            if DN.taxes_and_charges and not DN.taxes:
+                DN.append_taxes_from_master()
+                DN.save()
             report_doc.delivery_note = DN.name
             report_doc.status = "Delivered"
             report_doc.save()
