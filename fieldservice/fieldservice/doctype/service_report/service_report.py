@@ -13,7 +13,43 @@ from fieldservice.validation import validate_service_report
 from fieldservice.review_pipeline import build_default_pipeline
 from fieldservice.references import sync_references
 
+FOLLOW_UP_FIELDS = (
+	"company",
+	"customer",
+	"customer_name",
+	"report_type",
+	"employee",
+	"employee_name",
+	"customer_address",
+	"filter_address_by_customer",
+	"address_display",
+	"contact_person",
+	"filter_contact_by_customer",
+	"contact_email",
+	"titel",
+	"auftrag",
+	"externe_auftragsnummer",
+)
+
+FOLLOW_UP_REFERENCE_FIELDS = (
+	"source",
+	"source_type",
+	"document_type",
+	"document_name",
+	"external_id",
+	"external_entry",
+	"subject",
+)
+
+MAX_CHAIN_LENGTH = 200
+
+
 class ServiceReport(Document):
+	def before_insert(self):
+		# An amendment continues the chain of the report it replaces
+		if self.amended_from and not self.previous_report:
+			self.previous_report = frappe.db.get_value("Service Report", self.amended_from, "previous_report")
+
 	def on_submit(self):
 		self.status = "Submitted"
 		self.save()
@@ -305,3 +341,99 @@ def run_llm_review(service_report):
 		return []
 
 	return result_dicts
+
+
+@frappe.whitelist()
+def make_follow_up_report(source_name):
+	source = frappe.get_doc("Service Report", source_name)
+	source.check_permission("read")
+	if source.docstatus != 1:
+		frappe.throw(_("A follow-up report can only be created from a submitted service report."))
+
+	target = frappe.new_doc("Service Report")
+	for fieldname in FOLLOW_UP_FIELDS:
+		target.set(fieldname, source.get(fieldname))
+	target.previous_report = source.name
+	for row in source.references:
+		target.append("references", {f: row.get(f) for f in FOLLOW_UP_REFERENCE_FIELDS})
+	return target
+
+
+@frappe.whitelist()
+def get_report_chain(service_report):
+	frappe.has_permission("Service Report", "read", service_report, throw=True)
+
+	root = service_report
+	seen = {root}
+	while len(seen) < MAX_CHAIN_LENGTH:
+		previous = frappe.db.get_value("Service Report", root, "previous_report")
+		if not previous or previous in seen:
+			break
+		seen.add(previous)
+		root = previous
+
+	children = {}
+	names = {root}
+	level = [root]
+	while level and len(names) < MAX_CHAIN_LENGTH:
+		rows = frappe.get_all(
+			"Service Report",
+			filters={"previous_report": ["in", level]},
+			fields=["name", "previous_report"],
+			order_by="creation asc",
+		)
+		level = []
+		for row in rows:
+			if row.name in names:
+				continue
+			names.add(row.name)
+			children.setdefault(row.previous_report, []).append(row.name)
+			level.append(row.name)
+
+	if len(names) < 2:
+		return []
+
+	details = {
+		r.name: r
+		for r in frappe.get_all(
+			"Service Report",
+			filters={"name": ["in", list(names)]},
+			fields=["name", "titel", "status", "docstatus", "hours_sum", "delivery_note", "creation"],
+		)
+	}
+	periods = {
+		r.parent: r
+		for r in frappe.db.sql(
+			"""select parent, min(begin) as period_start, max(`end`) as period_end
+			from `tabService Report Work` where parenttype = 'Service Report' and parent in %(names)s
+			group by parent""",
+			{"names": list(names)},
+			as_dict=True,
+		)
+	}
+
+	chain = []
+
+	def walk(name, depth):
+		if name not in details:
+			return
+		row = details[name]
+		period = periods.get(name) or {}
+		chain.append(
+			{
+				"name": name,
+				"depth": depth,
+				"titel": row.titel,
+				"status": row.status,
+				"docstatus": row.docstatus,
+				"hours_sum": row.hours_sum,
+				"delivery_note": row.delivery_note,
+				"period_start": period.get("period_start") or row.creation,
+				"period_end": period.get("period_end"),
+			}
+		)
+		for child in children.get(name, []):
+			walk(child, depth + 1)
+
+	walk(root, 0)
+	return chain

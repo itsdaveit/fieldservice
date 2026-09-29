@@ -91,6 +91,61 @@ function build_reference_url(source, reference, entry) {
 }
 
 // Render the report's references as clickable chips.
+function render_report_history(frm) {
+	const fld = frm.fields_dict.report_history;
+	if (!fld) return;
+	fld.$wrapper.empty();
+	frm.toggle_display('history_section', !!frm.doc.previous_report);
+	if (frm.is_new()) return;
+
+	const report = frm.doc.name;
+	frappe.call({
+		method: 'fieldservice.fieldservice.doctype.service_report.service_report.get_report_chain',
+		args: { service_report: report },
+	}).then(r => {
+		const chain = r.message || [];
+		if (frm.doc.name !== report) return;
+		frm.toggle_display('history_section', chain.length > 0);
+		if (!chain.length) return;
+
+		const esc = frappe.utils.escape_html;
+		const fmt_date = v => v ? frappe.datetime.str_to_user(v).split(' ')[0] : '';
+		const status_color = row => {
+			if (row.docstatus === 2) return 'red';
+			if (row.status === 'Delivered') return 'green';
+			if (row.docstatus === 1) return 'blue';
+			return 'orange';
+		};
+		const rows = chain.map(row => {
+			const current = row.name === frm.doc.name;
+			const status = row.docstatus === 2 ? __('Cancelled') : __(row.status || 'Draft');
+			const period = [fmt_date(row.period_start), fmt_date(row.period_end)]
+				.filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(' – ');
+			const name = current
+				? '<b>' + esc(row.name) + '</b>'
+				: '<a href="/app/service-report/' + encodeURIComponent(row.name) + '">' + esc(row.name) + '</a>';
+			const dn = row.delivery_note
+				? '<a href="/app/delivery-note/' + encodeURIComponent(row.delivery_note) + '">' + esc(row.delivery_note) + '</a>'
+				: '';
+			const indent = row.depth ? '<span style="opacity:.5;margin-left:' + ((row.depth - 1) * 16) + 'px;">↳ </span>' : '';
+			return '<tr' + (current ? ' style="background:var(--highlight-color, var(--control-bg));"' : '') + '>'
+				+ '<td>' + indent + name + '</td>'
+				+ '<td>' + esc(period) + '</td>'
+				+ '<td>' + esc(row.titel || '') + '</td>'
+				+ '<td style="text-align:right;">' + format_number(row.hours_sum || 0, null, 2) + ' h</td>'
+				+ '<td><span class="indicator-pill ' + status_color(row) + '">' + esc(status) + '</span></td>'
+				+ '<td>' + dn + '</td>'
+				+ '</tr>';
+		});
+		fld.$wrapper.html(
+			'<table class="table table-bordered table-condensed" style="margin:4px 0 12px;font-size:13px;">'
+			+ '<thead><tr><th>' + __('Service Report') + '</th><th>' + __('Period') + '</th><th>' + __('Titel')
+			+ '</th><th style="text-align:right;">' + __('Hours') + '</th><th>' + __('Status') + '</th><th>'
+			+ __('Delivery Note') + '</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>'
+		);
+	});
+}
+
 function render_reference_links(frm) {
 	const fld = frm.fields_dict.reference_links;
 	if (!fld) return;
@@ -169,6 +224,16 @@ frappe.ui.form.on('Service Report', {
         render_contact_card(frm);
         render_quick_add_buttons(frm);
         render_reference_links(frm);
+        render_report_history(frm);
+
+        if (frm.doc.docstatus === 1) {
+            frm.add_custom_button(__("🔁 Create Follow-up Report"), function() {
+                frappe.model.open_mapped_doc({
+                    method: "fieldservice.fieldservice.doctype.service_report.service_report.make_follow_up_report",
+                    frm: frm
+                });
+            });
+        }
 
         if (sr_report_Interval != frm.doc.current_sr_report_Interval) {
             clearInterval(sr_report_Interval);
