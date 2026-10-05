@@ -381,6 +381,11 @@ def insert_surchargs_in_delivery_note(service_report):
             return
         delivery_note_items = delivery_note.items
         delivery_note_items_copy = delivery_note_items.copy()
+        work_items = [i for i in delivery_note_items_copy if i.agains_service_report and i.service_report_item_begin]
+        holidays = get_public_holidays(
+            min(i.service_report_item_begin for i in work_items) - timedelta(days=7),
+            max(i.service_report_item_end or i.service_report_item_begin for i in work_items) + timedelta(days=2),
+            delivery_note.company) if work_items else {}
         delivery_note.ignore_pricing_rule = 1
         
         count = 0
@@ -392,10 +397,9 @@ def insert_surchargs_in_delivery_note(service_report):
             price = item.rate
             
             if item.agains_service_report and item.ignore_surcharges == 0 and item.service_report_item_begin:
-                surcharges_timeline = get_surcharges_timeline(surcharges_fur_current_surcharge_Determination, item)[0]
+                surcharges_timeline, relevant_surcharge_dict = get_surcharges_timeline(surcharges_fur_current_surcharge_Determination, item, holidays)
                 sorted_work_time_line = add_work_data_to_timeline(surcharges_timeline, item)
                 start_surcharge = get_start_surcharge(surcharges_timeline, item)
-                relevant_surcharge_dict = get_surcharges_timeline(surcharges_fur_current_surcharge_Determination, item)[1]
                 surcharge_dict = create_surcharge_dict_for_work(relevant_surcharge_dict, sorted_work_time_line, start_surcharge, delivery_note)
                 wp_employee = wp_employee_map.get(item.against_service_report_item, employee)
                 surcharge_item = get_item_from_surcharge_in_percent(surcharge_dict, wp_employee)
@@ -449,21 +453,58 @@ def get_relevant_days(begin: datetime, end: datetime):
     return days
 
 
-def get_surcharges_timeline(surcharges_fur_current_surcharge_Determination, work_position):
+_WEEKLY_OFF_DESCRIPTIONS = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+    "montag", "dienstag", "mittwoch", "donnerstag", "freitag", "samstag", "sonntag"}
+
+
+def _is_holiday_rule(surcharge):
+    return (surcharge.weekday or "").strip().lower() == "public holiday"
+
+
+def get_public_holidays(start, end, company=None):
+    """Gesetzliche Feiertage {date: Bezeichnung} aus den ERPNext Holiday Lists.
+    Wochenend-Einträge (weekly_off oder nur Wochentagsname als Bezeichnung) zählen nicht.
+    Decken mehrere Listen ein Datum ab, gewinnt die Default-Liste der Firma."""
+    from frappe.utils import getdate, strip_html
+    rows = frappe.db.sql("""
+        select h.holiday_date, h.description, hl.name as list_name
+        from `tabHoliday` h join `tabHoliday List` hl on hl.name = h.parent
+        where h.holiday_date between %s and %s
+          and h.holiday_date between hl.from_date and hl.to_date
+          and ifnull(h.weekly_off, 0) = 0
+    """, (getdate(start), getdate(end)), as_dict=True)
+    preferred = frappe.db.get_value("Company", company, "default_holiday_list") if company else None
+    by_date = {}
+    for r in rows:
+        desc = strip_html(r.description or "").strip()
+        if desc.lower() in _WEEKLY_OFF_DESCRIPTIONS:
+            continue
+        by_date.setdefault(r.holiday_date, {})[r.list_name] = desc or _("Public holiday")
+    return {d: lists.get(preferred) or next(iter(lists.values())) for d, lists in by_date.items()}
+
+
+def get_surcharges_timeline(surcharges_fur_current_surcharge_Determination, work_position, holidays=None):
     #Gibt die timeline und die für die timeline relevanten Zuschläge zurück
+    #An Feiertagen ersetzen die "Public holiday"-Regeln die Regeln des Wochentags.
     projected_timeline = []
     relevant_surcharge_dict = []
     relevant_days = get_relevant_days(work_position.service_report_item_begin, work_position.service_report_item_end)
+    if holidays is None:
+        holidays = get_public_holidays(relevant_days[0], relevant_days[-1])
+    holiday_rules = [s for s in surcharges_fur_current_surcharge_Determination if _is_holiday_rule(s)]
+    weekday_rules = [s for s in surcharges_fur_current_surcharge_Determination if not _is_holiday_rule(s)]
 
-    for surcharge in surcharges_fur_current_surcharge_Determination:
-        if surcharge.weekday != "Public Holiday":
-            for rwd in relevant_days:
-                if surcharge.weekday == rwd.strftime('%A'):
-                    a = rwd + surcharge.from_time
-                    projected_timeline.append(a)
-                    sur = surcharge.copy()
-                    sur.update({"from_time" : a})
-                    relevant_surcharge_dict.append(sur)
+    for rwd in relevant_days:
+        if holiday_rules and rwd.date() in holidays:
+            day_rules = holiday_rules
+        else:
+            day_rules = [s for s in weekday_rules if s.weekday == rwd.strftime('%A')]
+        for surcharge in day_rules:
+            a = rwd + surcharge.from_time
+            projected_timeline.append(a)
+            sur = surcharge.copy()
+            sur.update({"from_time" : a})
+            relevant_surcharge_dict.append(sur)
     
     sorted_projected_timeline = sorted(projected_timeline)
     # print("projected_timeline")
@@ -514,6 +555,29 @@ def create_surcharge_dict_for_work(relevant_surcharge_dict,sorted_work_time_line
     print(surcharge_dict_list)
 
     return surcharge_dict_list
+
+
+def get_surcharge_segments(customer, begin, end, company=None):
+    """Zuschlagsabschnitte eines Arbeitszeitraums laut gültiger Staffel des Kunden
+    (gleiche Rechnung wie beim Lieferschein). Leer, wenn der Kunde keine Zuschläge hat."""
+    from frappe.utils import flt, get_datetime
+    rules = get_surcharges_fur_current_surcharge_Determination(frappe.get_cached_doc("Customer", customer))
+    begin, end = get_datetime(begin), get_datetime(end)
+    if not rules or not begin or not end or end <= begin:
+        return []
+    position = frappe._dict(service_report_item_begin=begin, service_report_item_end=end)
+    holidays = get_public_holidays(begin - timedelta(days=7), end + timedelta(days=2), company)
+    timeline, relevant = get_surcharges_timeline(rules, position, holidays)
+    segments = create_surcharge_dict_for_work(
+        relevant, add_work_data_to_timeline(timeline, position), get_start_surcharge(timeline, position), None)
+    return [{
+        "begin": seg.begin,
+        "end": seg.end,
+        "hours": seg.qty,
+        "percent": flt(seg.surcharge_in_percent) if seg.surcharge_in_percent not in (None, "", "None") else None,
+        "rule_weekday": seg.weekday,
+        "holiday": holidays.get(seg.begin.date()),
+    } for seg in segments]
 
 
 # =============================================================================
