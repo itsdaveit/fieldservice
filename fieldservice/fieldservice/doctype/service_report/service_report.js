@@ -505,6 +505,13 @@ frappe.ui.form.on('Service Report', {
     //     },
 
 	customer: function(frm) {
+		// company is read-only, so Frappe never fills its user default on a new
+		// form; ERPNext >= 16.52 refuses get_party_details without it.
+		if (!frm.doc.company) {
+			frm.doc.company = frappe.defaults.get_user_default("Company")
+				|| frappe.defaults.get_global_default("company");
+			frm.refresh_field("company");
+		}
 		erpnext.utils.get_party_details(frm, null, null, function() {
 			apply_preferred_customer_address(frm);
 		});
