@@ -2,3 +2,4 @@
 
 [post_model_sync]
 fieldservice.patches.v1_0.migrate_legacy_references
+fieldservice.patches.v1_0.remove_foreign_customer_fields
